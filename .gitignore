@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+src/*.o
+src/*.so
+src/*.dll
+# Ignore OS generated files
+**/.DS_Store
+**/.Rhistory
