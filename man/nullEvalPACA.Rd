@@ -40,7 +40,7 @@ Number of random permutations to build the emperical null distribution.}
 }
 \description{
 This method applies a simple case/control label permutation approach to qunatify the
-statistical significance of the presence of subphenotypic variation the cases, a givne fixed \eqn{k}.
+statistical significance of the presence of subphenotypic variation unique to the cases, for a given fixed \eqn{k}.
 The procedure should be able to reject the null (no subphenotypic variation) when there is sufficently
 strong variation unique to the cases.
 }
