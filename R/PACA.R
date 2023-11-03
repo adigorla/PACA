@@ -1,3 +1,5 @@
+###########################################################################################################
+
 #' @title  Phenotype Aware Components Analysis (PACA)
 #'
 #' @description
@@ -5,7 +7,7 @@
 #' contrastive learning approach leveraging canonical correlation analysis to robustly capture weak sources of
 #' subphenotypic variation. Given case-control data of any modality, PACA highlights the dominant variation in a
 #' subspace that is not affected by background variation as a putative representation of phenotypic heterogeneity. We do so by
-#' removing the top \code{k} components of shared variation from the cases \code{X}.
+#' removing the top \code{k} components of shared variation from the cases (or foreground) \code{X}.
 #' In the context of complex disease, PACA learns a gradient of variation unique to cases \code{X} in
 #' a given dataset, while leveraging control samples \code{Y} for accounting for variation and imbalances of biological
 #' and technical confounders between cases and controls.
@@ -19,59 +21,248 @@
 #'          Control (foreground) input data matrix. \cr
 #'          Note: this input data needs to be scaled along the samples axis before being provided as input.
 #'          This preprocessing can be done using the \code{\link{transformCCAinput}} function.
-#' @param k Positive integer, \eqn{k > 1}; \cr
-#'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
-#' @param pcRank Positive integer, optional (default \eqn{2}); \cr
+#' @param k positive scalar, optional (default: \eqn{NULL}); \cr
+#'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
+#'          When \eqn{k = NULL} (default), K is automatically infered, i.e, we run autoPACA by default.
+#' @param scale bool, optional (default: \eqn{TRUE}); normalize (center+scale) each matrix column-wise
+#' @param rank Positive integer, optional (default \eqn{2}); \cr
 #'               Number of dominant principle components to be computed for the corrected case data.
-#' @param residOnly bool, optional (default \eqn{FALSE}); \cr
+#' @param thrsh Positive real value, optional (default \eqn{10}); \cr
+#'              Threshold value for the maximum ratio of variance in \emph{PACA} corrected \code{X} PCs and the variance it explain in Y
+#'              which indicates the presence of residual shared variation in X.
+#'
+#' @param ccweights bool, optional (default \eqn{FALSE}); \cr
 #'                  If \eqn{TRUE}, return the \emph{PACA} corrected case data (\code{xtil}) ONLY.
+#' @param info int, optional (default: 1); verbosity for the log generated
+#' \itemize{
+#' \item 0 : Errors and warnings only
+#' \item 1 : Basic Informational messages
+#' \item 2 : More detailed Informational messages
+#' \item 3 : Debug mode, all informational log is dumped
+#' }
 #'
-#'@return By default, \code{PACA} returns a list containing the following components:
+#'@return By default, \code{paca} returns a list containing the following components:
 #' \describe{
-#'    \item{x}{        \eqn{n_1} by \eqn{pcRank} matrix; \cr
-#'                     the projections / scores of the \emph{PACA} corrected case data (\code{xtil}).
+#'    \item{Xtil}{     \eqn{m} by \eqn{n_1} matrix; \cr
+#'                     the \emph{PACA} corrected case data, i.e., the data with the case-specific variation only.
 #'    }
-#'    \item{rotation}{  \eqn{m} by \eqn{pcRank} matrix; \cr
-#'                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{xtil}).
+#'    \item{U0}{       \eqn{m} by \eqn{k} matrix; \cr
+#'                     the \emph{PACA} shared components that are removed from \eqn{X}.
 #'    }
-#'
-#'    \item{xtil}{     \eqn{m} by \eqn{n_1} matrix; \cr
-#'                     the \emph{PACA} corrected case data, i.e., the data with the case-specific variation only. \cr
-#'                     NOTE: when \eqn{residOnly = TRUE}, only the \code{xtil} matrix is returned.
+#'    \item{x}{        \eqn{n_1} by \eqn{rank} matrix; \cr
+#'                     the projections / scores of the \emph{PACA} corrected case data (\code{Xtil}).
+#'    }
+#'    \item{rotation}{  \eqn{m} by \eqn{rank} matrix; \cr
+#'                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{Xtil}).
+#'    }
+#'}
+#'@return When \eqn{ccweights = TRUE}, \code{paca} returns a list containing the CCA direction and variates along withe the \emph{PACA} principle components:
+#' \describe{
+#'    \item{Xtil}{     \eqn{m} by \eqn{n_1} matrix; \cr
+#'                     the \emph{PACA} corrected case data, i.e., the data with the case-specific variation only.
+#'    }
+#'    \item{U0}{       \eqn{m} by \eqn{k} matrix; \cr
+#'                     the \emph{PACA} shared components that are removed from \eqn{X}.
+#'    }
+#'    \item{x}{        \eqn{n_1} by \eqn{rank} matrix; \cr
+#'                     the projections / scores of the \emph{PACA} corrected case data (\code{Xtil}).
+#'    }
+#'    \item{rotation}{\eqn{m} by \eqn{rank} matrix; \cr
+#'                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{Xtil}).
+#'    }
+#'    \item{A}{       the loadings for \eqn{X}
+#'    }
+#'    \item{B}{       the loadings for \eqn{Y}
+#'    }
+#'    \item{U}{       canonical variables of \eqn{X}, calculated by column centering \eqn{X} and projecting it on \eqn{A}
+#'    }
+#'    \item{V}{       canonical variables of \eqn{Y}, calculated by column centering \eqn{Y} and projecting it on \eqn{B}
 #'    }
 #'}
 #'
 #' @export
 #'
 #' @importFrom rsvd rpca
-PACA <- function(X, Y, k, pcRank = 2, residOnly = FALSE){
+paca <- function(X, Y,
+                 k = NULL,
+                 scale = TRUE,
+                 rank = 5,
+                 thrsh = 10.0,
+                 ccweights = FALSE,
+                 info = 1){
+  names_list <- getNames(X, Y)
 
-  # calculate the CCA components
-  pacaFull <- CCA(X, Y)
-  rm(Y)
+  if (is.null(k)){ # run autoPACA
+    tmp <- cpp_autoPACA(X, Y, scale, ccweights, thrsh, info)
+    if(ccweights){
+      cc_names <- paste0('CC', seq(length(tmp$corr)))
+      names(tmp$corr) <- cc_names
+      colnames(tmp[['A']]) <- cc_names
+      colnames(tmp[['B']]) <- cc_names
+      colnames(tmp[['U']]) <- cc_names
+      colnames(tmp[['V']]) <- cc_names
 
-  # k cannot be less than 2
-  if (k > 1){
-    k0_hat <- k
-  } else{
-    k0_hat <- 2
+      row.names(tmp[['A']]) <- names_list$X[['col']]
+      row.names(tmp[['B']]) <- names_list$Y[['col']]
+      row.names(tmp[['U']]) <- names_list$X[['row']]
+      row.names(tmp[['V']]) <- names_list$Y[['row']]
+    }
+  } else{ # run PACA with fixed K
+    tmp <- cpp_PACA(X, Y, k, scale, ccweights, info)
+    if(ccweights){
+      cc_names <- paste0('CC', seq(length(tmp$corr)))
+      names(tmp$corr) <- cc_names
+      colnames(tmp[['A']]) <- cc_names
+      colnames(tmp[['B']]) <- cc_names
+      colnames(tmp[['U']]) <- cc_names
+      colnames(tmp[['V']]) <- cc_names
+
+      row.names(tmp[['A']]) <- names_list$X[['col']]
+      row.names(tmp[['B']]) <- names_list$Y[['col']]
+      row.names(tmp[['U']]) <- names_list$X[['row']]
+      row.names(tmp[['V']]) <- names_list$Y[['row']]
+    }
+
   }
 
-  # get the corrected case data matrix
-  U_1 <- pacaFull$U[,1:k0_hat] / t(kronecker(matrix(1,1,dim(pacaFull$U)[1]),sqrt(colSums(pacaFull$U[,1:k0_hat]^2))))
-  means_matrix <- t(kronecker(matrix(1,1,dim(X)[1]),colMeans(X)))
-  X_centered <- X - means_matrix
-  X_tilde <- X_centered - (U_1 %*% (t(U_1) %*% X_centered)) + means_matrix
-  rm(means_matrix, X_centered, U_1)
+  colnames(tmp[['Xtil']]) <- names_list$X[['col']]
+  row.names(tmp[['Xtil']]) <- names_list$X[['row']]
+  colnames(tmp[['U0']]) <- cc_names[1:dim(tmp[['U0']])[2]]
+  row.names(tmp[['U0']]) <- names_list$X[['row']]
 
-  # END algo here and return Xtilde only
-  if (residOnly) {
-    return(X_tilde)
-  }
+  # do PCA decomp of case specific signal
+  pca.res <- rpca(t(tmp[['Xtil']]), k = rank, center = TRUE, scale = FALSE, q = 2)
+  tmp$x <- pca.res$x
+  tmp$rotation <- pca.res$rotation
 
-  res <- rpca(t(X_tilde), k = pcRank, center = TRUE, scale = FALSE, q = 2)
-
-  return(list(x = res$x,
-              rotation = res$rotation,
-              xtil = X_tilde))
+  return(tmp)
 }
+
+###########################################################################################################
+
+###########################################################################################################
+
+#' @title Calculate PACA PC1 Variance
+#'
+#' @name paca_varPC1
+#'
+#' @noRd
+#'
+#' @usage NULL
+#'
+#' @param X \eqn{m} by \eqn{n_1} matrix; \cr
+#'          Case (foreground) input data matrix. \cr
+#'          Note: this input data needs to be scaled along the samples axis before being provided as input.
+#'          This preprocessing can be done using the \code{\link{transformCCAinput}} function.
+#' @param Y \eqn{m} by \eqn{n_0} matrix; \cr
+#'          Control (foreground) input data matrix. \cr
+#'          Note: this input data needs to be scaled along the samples axis before being provided as input.
+#'          This preprocessing can be done using the \code{\link{transformCCAinput}} function.
+#' @param k Positive integer, \eqn{k > 1}; \cr
+#'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
+#'
+#' @return non-negative real value; the variance of the top \emph{PACA} PC of the input data (\code{X}).
+#'
+#' @importFrom stats var
+#'
+#' @keywords internal
+#' @noRd
+paca_varPC1 <- function(X, Y, k){
+
+  res <- cpp_PACA(X, Y, k, TRUE, FALSE, 0)
+  pca.res <- rpca(t(res[['Xtil']]), k = 1, center = TRUE, scale = FALSE, q = 2)$x
+
+  return(var(pca.res[,1]))
+}
+
+###########################################################################################################
+
+###########################################################################################################
+
+#' @title PACA Null Case Evaluation (paca_null)
+#'
+#' @name paca_null
+#'
+#' @description
+#' This method applies a simple case/control label permutation approach to qunatify the
+#' statistical significance of the presence of subphenotypic variation the cases, a givne fixed \eqn{k}.
+#' The procedure should be able to reject the null (no subphenotypic variation) when there is sufficently
+#' strong variation unique to the cases.
+#'
+#' @usage nullEvalPACA(X, Y, k, nPerm = 100)
+#'
+#' @param X \eqn{n_1} by \eqn{m} matrix; \cr
+#'          Case (foreground) input data matrix. \cr
+#'          It is recommended to normailize the feature scales as appropriate for the data modality.
+#'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
+#' @param Y \eqn{n_0} by \eqn{m} matrix; \cr
+#'          Control (foreground) input data matrix. \cr
+#'          It is recommended to normailize the feature scales as appropriate for the data modality.
+#'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
+#' @param k Positive integer, \eqn{k > 1}; \cr
+#'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
+#' @param nperm Positive integer, optional (default \eqn{100}); \cr
+#'          Number of random permutations to build the emperical null distribution.
+#'
+#' @return \code{nullEvalPACA} returns a list containing the following components:
+#' \describe{
+#'    \item{pval}{     non-negative real value; \cr
+#'                     the significance of rejecting the null hypothesis that there is no subphenotypic structure in the case data \code{X}.
+#'    }
+#'    \item{empVar}{   non-negative real value; \cr
+#'                     the variance of the top \emph{PACA} PC of the case data (\code{xtil}).
+#'    }
+#'
+#'    \item{nullVars}{ list of size \eqn{nPerm}; \cr
+#'                     the variances of the top \emph{PACA} PC of each of the permuted null data.
+#'    }
+#'}
+#'
+#' @export
+paca_null <- function(X, Y, k, nperm = 100){
+
+  # perp data for perm
+  xy <- cbind(t(X), t(Y))
+  cat("\nStarting permutations...") # \nComb matrix dim : ", dim(xy))
+  ids <- c(1:dim(xy)[2])
+  colnames(xy) <- ids
+  sz <- ceiling(length(ids)/2)
+
+  # Scale input for CCA
+  stdDat <- transformCCAinput(X, Y, .center = TRUE, .scale = TRUE)
+  rm(X, Y)
+
+  # get point stat for selected k
+  empVar <- paca_varPC1(stdDat$x, stdDat$y, k)
+  rm(stdDat)
+
+  # get dist of permuted null
+  nullVars <- c()
+  for (i in 1:nPerm){
+    inCase <- sample(ids, size=sz, replace=F)
+    Xs <- xy[,inCase]
+    Ys <- xy[,setdiff(ids, inCase)]
+    Xs <- scale(Xs, center = TRUE, scale = T)
+    Ys <- scale(Ys, center = TRUE, scale = T)
+
+    nv <- paca_varPC1(Xs, Ys, k)
+
+    nullVars <- c(nullVars, nv)
+    if(i%%25 == 0){
+      cat("\n\tDone with perm ", i)
+    }
+  }
+
+  # get emperical p-value
+  empPval <- calcPval(empVar, nullVars)
+
+  return(list(pval = empPval,
+              empVar = empVar,
+              nullVars = nullVars))
+}
+
+###########################################################################################################
+
+
+
+

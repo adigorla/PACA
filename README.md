@@ -1,12 +1,13 @@
-
 # PACA
 
 <!-- badges: start -->
 ![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
-![release: v0.1.0](https://img.shields.io/badge/release-v0.1.0-green)
+![release: v0.2.0](https://img.shields.io/badge/release-v0.2.0-green)
 ![coverage: 100%](https://img.shields.io/badge/coverage-80%25-brightgreen)
 ![docs: in-progress](https://img.shields.io/badge/docs-in--progress-yellow)
 <!-- badges: end -->
+
+
 
 _**Documenation development in-progress**_
 
