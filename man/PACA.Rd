@@ -2,6 +2,7 @@
 % Please edit documentation in R/paca.R
 \name{paca}
 \alias{paca}
+\alias{paca_null}
 \title{Phenotype Aware Components Analysis (PACA)}
 \usage{
 paca(
@@ -14,22 +15,22 @@ paca(
   ccweights = FALSE,
   info = 1
 )
+
+nullEvalPACA(X, Y, k, nPerm = 100)
 }
 \arguments{
-\item{X}{\eqn{m} by \eqn{n_1} matrix, where \eqn{m > n_1}; \cr
-         Case (foreground) input data matrix. \cr
+\item{X}{\eqn{n_1} by \eqn{m} matrix; \cr
+Case (foreground) input data matrix. \cr
+It is recommended to normailize the feature scales as appropriate for the data modality.
+E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
-         Note: this input data needs to be scaled along the samples axis before being provided as input.
-         This preprocessing can be done using the \code{\link{transformCCAinput}} function.}
-
-\item{Y}{\eqn{m} by \eqn{n_0} matrix, where \eqn{m > n_0}; \cr
+\item{Y}{\eqn{n_0} by \eqn{m} matrix; \cr
 Control (foreground) input data matrix. \cr
-Note: this input data needs to be scaled along the samples axis before being provided as input.
-This preprocessing can be done using the \code{\link{transformCCAinput}} function.}
+It is recommended to normailize the feature scales as appropriate for the data modality.
+E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
-\item{k}{positive scalar, optional (default: \eqn{NULL}); \cr
-Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
-When \eqn{k = NULL} (default), K is automatically infered, i.e, we run autoPACA by default.}
+\item{k}{Positive integer, \eqn{k > 1}; \cr
+Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.}
 
 \item{scale}{bool, optional (default: \eqn{TRUE}); normalize (center+scale) each matrix column-wise}
 
@@ -50,6 +51,9 @@ If \eqn{TRUE}, return the \emph{PACA} corrected case data (\code{xtil}) ONLY.}
 \item 2 : More detailed Informational messages
 \item 3 : Debug mode, all informational log is dumped
 }}
+
+\item{nperm}{Positive integer, optional (default \eqn{100}); \cr
+Number of random permutations to build the emperical null distribution.}
 }
 \value{
 By default, \code{paca} returns a list containing the following components:
@@ -91,6 +95,20 @@ When \eqn{ccweights = TRUE}, \code{paca} returns a list containing the CCA direc
    \item{V}{       canonical variables of \eqn{Y}, calculated by column centering \eqn{Y} and projecting it on \eqn{B}
    }
 }
+
+\code{nullEvalPACA} returns a list containing the following components:
+\describe{
+   \item{pval}{     non-negative real value; \cr
+                    the significance of rejecting the null hypothesis that there is no subphenotypic structure in the case data \code{X}.
+   }
+   \item{empVar}{   non-negative real value; \cr
+                    the variance of the top \emph{PACA} PC of the case data (\code{xtil}).
+   }
+
+   \item{nullVars}{ list of size \eqn{nPerm}; \cr
+                    the variances of the top \emph{PACA} PC of each of the permuted null data.
+   }
+}
 }
 \description{
 Phenotype Aware Components Analysis (PACA) is a
@@ -101,4 +119,9 @@ removing the top \code{k} components of shared variation from the cases (or fore
 In the context of complex disease, PACA learns a gradient of variation unique to cases \code{X} in
 a given dataset, while leveraging control samples \code{Y} for accounting for variation and imbalances of biological
 and technical confounders between cases and controls.
+
+This method applies a simple case/control label permutation approach to qunatify the
+statistical significance of the presence of subphenotypic variation the cases, a givne fixed \eqn{k}.
+The procedure should be able to reject the null (no subphenotypic variation) when there is sufficently
+strong variation unique to the cases.
 }

@@ -34,6 +34,8 @@
 #'    }
 #'}
 #' @export
+#'
+#' @rdname CCA
 cca = function (X, Y, scale = TRUE, info = 1){
 
   names_list <- getNames(X, Y)

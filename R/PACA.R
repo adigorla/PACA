@@ -83,6 +83,8 @@
 #' @export
 #'
 #' @importFrom rsvd rpca
+#'
+#' @rdname PACA
 paca <- function(X, Y,
                  k = NULL,
                  scale = TRUE,
@@ -219,6 +221,8 @@ paca_varPC1 <- function(X, Y, k){
 #'}
 #'
 #' @export
+#'
+#' @rdname PACA
 paca_null <- function(X, Y, k, nperm = 100){
 
   # perp data for perm

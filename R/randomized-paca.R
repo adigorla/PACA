@@ -36,6 +36,8 @@
 #' @export
 #'
 #' @importFrom stats prcomp
+#'
+#' @rdname rPACA
 paca_r <- function(X, Y, k , niter = 20, batch = 600, rank = 5){
   X_pacacomb <- matrix(0, ncol=rank, nrow=dim(X)[2])
   X_ids <- colnames(X)
