@@ -169,5 +169,9 @@ For all older versions of R and Intel Mac installation issues, please refer to t
 
 ## License and Disclaimer
 
-PACA is publicly released under the GPL-3.0 license (full license text found [here](LICENSE.Rd)). Note however that the programs it calls may be subject to different licenses. Users are responsible for checking that they are authorized to run all programs before running this script.
+PACA is publicly released under the GPL-3.0 license (full license text found [here](LICENSE.md)). Note however that the programs it calls may be subject to different licenses. Users are responsible for checking that they are authorized to run all programs before running this script.
+
+## Citation
+Gorla, Aditya, *et al*. "[Phenotypic subtyping via contrastive learning](https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1)" **biorxiv** (2023).
+
 
