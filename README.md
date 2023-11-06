@@ -42,9 +42,15 @@ library(PACA)
 X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
 # IF: input data NxM, transpose both matrices to MxN
-#       X <- t(X)
+#       
 #       Y <- t(Y)
 ```
+>[!NOTE]
+>all PACA functions require the input matrics to be in from features-by-samples (MxN). So if input data is NxM, transpose both matrices to MxN
+> ```r
+> X <- t(X)
+> Y <- t(Y)
+> ```
 The input data, `X` & `Y` needs to be of the form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis, e.g. quantile normalization for RNAseq data. 
 NOTE: for all examples we assume the the number of samples, N, is the same for cases and controls for simplicity. In reality, the number if cases and controls can be different. `paca` only requires the number of features, M, to be the same and alinged in the case/control data.
 
