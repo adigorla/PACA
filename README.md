@@ -9,7 +9,9 @@
 
 >[!WARNING]  
 >___Documenation development in-progress___
->The code is still in beta and likly has bugs
+>
+>The code is still in beta and likly has bugs 
+>
 >Please report all bugs and feature requests by creating a new Issue ticket
 
 Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approach leveraging canonical correlation analysis to robustly capture weak sources of subphenotypic variation. PACA can be used to define *de novo* subtypes that are more likely to reflect molecular heterogeneity, especially in challenging cases where the phenotypic heterogeneity may be masked by a myriad of strong unrelated effects in the data.
@@ -43,12 +45,9 @@ library(PACA)
 # load data
 X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
-# IF: input data NxM, transpose both matrices to MxN
-#       
-#       Y <- t(Y)
 ```
 >[!IMPORTANT]
->all PACA functions require the input matrics to be in from features-by-samples (MxN). So if input data is NxM, transpose both matrices to MxN
+>All PACA functions require the input matrics to be in from features-by-samples (MxN). So if input data is NxM, transpose both matrices to MxN
 > ```r
 > X <- t(X)
 > Y <- t(Y)
@@ -98,10 +97,10 @@ The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M
 
 ``` r
 # run paca_r
-resPACA <- paca_r(X, Y, k = 10, niter = 20, batch = 600, rank = 4)
+rPACA.res <- paca_r(X, Y, k = 10, niter = 20, batch = 600, rank = 4)
 
 # the dimension of the returned unique components of the cases
-print(dim(resPACA$x))
+print(dim(rPACA.res$x))
 
 ```
 `niter`, `rank` and `batch` are optional params. However, the users needs to make sure to set `batch` to `batch < min({M, N}` and `k < batch-1`. Increasing `niter` and/or `rank` empirically seems to increase the estimation accuracy of the randomized alogoritim, at the expense of increase runtime. 
@@ -119,13 +118,13 @@ library(PACA)
 X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
 
-resNulltest <- paca_null(X, Y, k, nperm = 100)
+PACA.nulltest <- paca_null(X, Y, k, nperm = 100)
 
 # p-value of rejecting the null
-print(resNulltest$pval)
+print(PACA.nulltest$pval)
 ```
 The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis. Increasing `nperm` increases the precision of the `pval` estimate.
-Please refer to the [PACA man page](man/ACA.Rd) for more detailed usage information.
+Please refer to the [PACA man page](man/PACA_null.Rd) for more detailed usage information.
 
 ## Troubleshooting
 
