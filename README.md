@@ -9,6 +9,8 @@
 
 >[!WARNING]  
 >___Documenation development in-progress___
+>The code is still in beta and likly has bugs
+>Please report all bugs and feature requests by creating a new Issue ticket
 
 Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approach leveraging canonical correlation analysis to robustly capture weak sources of subphenotypic variation. PACA can be used to define *de novo* subtypes that are more likely to reflect molecular heterogeneity, especially in challenging cases where the phenotypic heterogeneity may be masked by a myriad of strong unrelated effects in the data.
 
@@ -45,7 +47,7 @@ Y <- read.table("control_data1.txt")
 #       
 #       Y <- t(Y)
 ```
->[!NOTE]
+>[!IMPORTANT]
 >all PACA functions require the input matrics to be in from features-by-samples (MxN). So if input data is NxM, transpose both matrices to MxN
 > ```r
 > X <- t(X)
