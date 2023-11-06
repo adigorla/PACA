@@ -18,10 +18,10 @@
 #' @param niter Positive integer; \cr
 #'              Number random sampling iterations.
 #' @param batch Positive integer; \cr
-#'                 Number of cases/controls to be sampled for the training set at each iteration. \cr
-#'                 Note that \eqn{k < batch-1} and \eqn{batch < min{m, n1, n0}}.
+#'              Number of cases/controls to be sampled for the training set at each iteration. \cr
+#'              Note that \eqn{k < batch-1} and \eqn{batch < min{m, n1, n0}}.
 #' @param rank Positive integer, optional (default \eqn{2}); \cr
-#'               Number of dominant principle components to be computed for the corrected case data.
+#'             Number of dominant principle components to be computed for the corrected case data.
 #'
 #' @return \code{autoPACA} returns a list containing the following components:
 #' \describe{
@@ -38,7 +38,10 @@
 #' @importFrom stats prcomp
 #'
 #' @rdname rPACA
-paca_r <- function(X, Y, k , niter = 20, batch = 600, rank = 5){
+paca_r <- function(X, Y, k,
+                   niter = 20,
+                   batch = 600,
+                   rank = 5){
   X_pacacomb <- matrix(0, ncol=rank, nrow=dim(X)[2])
   X_ids <- colnames(X)
   Y_ids <- colnames(Y)

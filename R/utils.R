@@ -32,7 +32,7 @@
 #'
 #' @keywords internal
 #' @noRd
-transformCCAinput <- function(X, Y, .center = TRUE, .scale = FALSE){
+transformCCAinput <- function(X, Y, center = TRUE, scale = FALSE){
 
   # Transpose and scale (by samples) the input matrix
   x <- scale(t(X), center = .center, scale = .scale)

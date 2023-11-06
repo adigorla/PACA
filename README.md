@@ -8,8 +8,7 @@
 <!-- badges: end -->
 
 
-
-_**Documenation development in-progress**_
+___<font color='red'> Documenation development in-progress </font>___
 
 Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approach leveraging canonical correlation analysis to robustly capture weak sources of subphenotypic variation. PACA can be used to define *de novo* subtypes that are more likely to reflect molecular heterogeneity, especially in challenging cases where the phenotypic heterogeneity may be masked by a myriad of strong unrelated effects in the data.
 
@@ -18,11 +17,9 @@ Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approac
 **PACA** is implemented as a **R** packages which depends on the following :
 
 * Rcpp
-* RcppArmadillo
+* RcppEigen
 * rsvd
 * stats
-* gtools
-
 
 You can install **PACA** using *devtools*:
 
@@ -34,10 +31,9 @@ Please see troubleshooting at the bottom for compilation issues.
 
 ## Usage
 
-### autoPACA
+### PACA
 
-The `autoPACA` algorithm runs the basic `PACA` algorithm after automatically estimating the number of shared dimensions `k` to be removed and returns the unique components in the cases. It chooses `k` which maximizes the variation unique to cases in a given case/control dataset. The 
-
+The `paca` commmand runs the basic **PACA** algorithm after automatically estimating the number of shared dimensions `k` to be removed and returns the unique components in the cases. It chooses `k` which maximizes the variation unique to cases in a given case/control dataset. The 
 ``` r
 # load package
 library(PACA)
@@ -45,26 +41,42 @@ library(PACA)
 # load data
 X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
+# IF: input data NxM, transpose both matrices to MxN
+#       X <- t(X)
+#       Y <- t(Y)
 ```
-The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis, e.g. gene quantile normalization for RNAseq data. 
-NOTE: for all examples we assume the the number of samples, N, is the same for cases and controls for simplicity. In reality, the number if cases and controls can be different. `PACA` only requires the number of features, M, to be the same and alinged in the case/control data.
+The input data, `X` & `Y` needs to be of the form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis, e.g. quantile normalization for RNAseq data. 
+NOTE: for all examples we assume the the number of samples, N, is the same for cases and controls for simplicity. In reality, the number if cases and controls can be different. `paca` only requires the number of features, M, to be the same and alinged in the case/control data.
 
 ``` r
-# run autoPACA
-resPACA <- autoPACA(X, Y)
-
-# number of the top shared components removed
-print(resPACA$k)
+# run PACA (and infer k)
+PACA.res <- paca(X, Y)
 
 # the dimension of the returned unique components of the cases
-print(dim(resPACA$x))
+print(dim(PACA.res$x)) # Nxk
+
+# the dimension of the corrected case data
+print(dim(PACA.res$xtil)) # MxN
 
 ```
-Please refer to the [autoPACA man page](man/autoPACA.Rd) for more detailed usage information.
+
+One also has the option to run the `paca` algorithm and set a user defined `k`. This would return the unique components in the cases at the user definde `k`. The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N.  
+``` r
+# run PACA w/ fixed k
+resPACA <- PACA(X, Y, k = 10)
+
+# the dimension of the returned unique components of the cases
+print(dim(PACA.res$x)) # Nx10
+
+# the dimension of the corrected case data
+print(dim(PACA.res$xtil)) # MxN
+```
+
+Please refer to the [PACA man page](man/PACA.Rd) for more detailed usage information.
 
 ### rPACA
 
-`rPACA` is a randomized version of the basic `PACA` algorithm. `rPACA` allows us to apply `PACA` in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
+`paca_r` is a randomized version of the basic `paca` algorithm. `paca_r` allows us to apply **PACA** in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
 
 ``` r
 # load package
@@ -77,46 +89,19 @@ Y <- read.table("control_data1.txt")
 The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M << N. The data also need to be standardized along the feature axis. Also note that the number of shared dimensions `k` to be removed needs to be user specified. This can be chosen by performing a grid search over a range of `k` and picking a value that maximizes some application specific metric or based on the user's domain specific knowledge.
 
 ``` r
-# run rPACA
-resPACA <- rPACA(X, Y, k = 10, nIter = 20, stepSize = 600, pcRank = 4)
+# run paca_r
+resPACA <- paca_r(X, Y, k = 10, niter = 20, batch = 600, rank = 4)
 
 # the dimension of the returned unique components of the cases
 print(dim(resPACA$x))
 
 ```
-`nIter`, `pcRank` and `stepSize` are optional params. However, the users needs to make sure to set `stepSize` to `stepSize < min({M, N}` and `k < stepSize-1`. Increasing `nIter` and/or `pcRank` empirically seems to increase the estimation accuracy of the randomized alogoritim, at the expense of increase runtime. 
+`niter`, `rank` and `batch` are optional params. However, the users needs to make sure to set `batch` to `batch < min({M, N}` and `k < batch-1`. Increasing `niter` and/or `rank` empirically seems to increase the estimation accuracy of the randomized alogoritim, at the expense of increase runtime. 
 Please refer to the [rPACA man page](man/rPACA.Rd) for more detailed usage information.
-
-### PACA
-One also has the option to run the `PACA` algorithm and set a user defined `k`. This would return the unique components in the cases at the user definde `k`.
-
-``` r
-# load package
-library(PACA)
-
-# load data
-X <- read.table("case_data1.txt")
-Y <- read.table("control_data1.txt")
-
-# transpose input data NxM --> MxN and scale along sample axis
-# DO NOT SKIP
-inputDat <- transformCCAinput(X, Y, .center = TRUE, .scale = TRUE)
-```
-The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >>N. The data also need to be standardized along the feature axis. Note that here, the user needs to explicitly run the `transformCCAinput` function, which transpose input data and scales along sample axis. This is a mandatory step to transform the data into the appropriate form for the core `PACA` algorithm. This method is called internally in `autoPACA` and `rPACA`.
-
-``` r
-# run PACA
-resPACA <- PACA(X, Y, k = 10)
-
-# the dimension of the returned unique components of the cases
-print(dim(resPACA$x))
-
-```
-Please refer to the [PACA man page](man/PACA.Rd) and [transformCCAinput man page](man/transformCCAinput.Rd) and for more detailed usage information.
 
 ### Null Testing
 
-The `nullEvalPACA` algorithm allows users to test for the statistical significance of the presence of subphenotypic variation unique to the cases, for a given fixed `k`. This procedure should be able to reject the null (no subphenotypic variation) when there is sufficently strong variation unique to the cases.
+The `paca_null` algorithm allows users to test for the statistical significance of the presence of subphenotypic variation unique to the cases, for a given fixed `k`. This procedure should be able to reject the null (no subphenotypic variation) when there is sufficently strong variation unique to the cases.
 
 ``` r
 # load package
@@ -126,15 +111,18 @@ library(PACA)
 X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
 
-resNulltest <- nullEvalPACA(X, Y, k, nPerm = 100)
+resNulltest <- paca_null(X, Y, k, nperm = 100)
 
 # p-value of rejecting the null
 print(resNulltest$pval)
 ```
-The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis. Increasing `nPerm` increases the precision of the `pval` estimate.
-Please refer to the [nullEvalPACA man page](man/nullEvalPACA.Rd) for more detailed usage information.
+The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis. Increasing `nperm` increases the precision of the `pval` estimate.
+Please refer to the [PACA man page](man/ACA.Rd) for more detailed usage information.
 
 ## Troubleshooting
+
+<details>
+<summary>Instructions</summary>
 
 If you are using a mac and having installation issues, try installing homebrew or xcode then reinstalling **Rcpp** and **RcppArmadillo**. 
 
@@ -170,8 +158,9 @@ CPPFLAGS=-I$(LLVM_LOC)/include -I$(BREW_LOC)/include -I$(RARM_LOC)/include -I/Li
 Make sure that the four "UPATDTE & CHECK path is valid" lines point to valid location on your machine. 
 
 For all older versions of R and Intel Mac installation issues, please refer to the detailed instructions on the [The Coatless Professor](https://thecoatlessprofessor.com/programming/cpp/r-compiler-tools-for-rcpp-on-macos/) website.
+</details>
 
-### Credits
+## License and Disclaimer
 
-Our CCA algorithm is entirely based on that of R package [**CONFINED**](https://github.com/cozygene/CONFINED) by Mike Thompson, plese refer to their GitHub repo for more information on the CCA implementation. 
+PACA is publicly released under the GPL-3.0 license (full license text found [here](LICENSE.Rd)). Note however that the programs it calls may be subject to different licenses. Users are responsible for checking that they are authorized to run all programs before running this script.
 

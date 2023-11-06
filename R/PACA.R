@@ -191,7 +191,7 @@ paca_varPC1 <- function(X, Y, k){
 #' The procedure should be able to reject the null (no subphenotypic variation) when there is sufficently
 #' strong variation unique to the cases.
 #'
-#' @usage nullEvalPACA(X, Y, k, nPerm = 100)
+#' @usage paca_null(X, Y, k, nperm = 100)
 #'
 #' @param X \eqn{n_1} by \eqn{m} matrix; \cr
 #'          Case (foreground) input data matrix. \cr
@@ -222,7 +222,7 @@ paca_varPC1 <- function(X, Y, k){
 #'
 #' @export
 #'
-#' @rdname PACA
+#' @rdname PACA_null
 paca_null <- function(X, Y, k, nperm = 100){
 
   # perp data for perm
