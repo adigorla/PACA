@@ -5,11 +5,11 @@
 #' rPACA allows us to apply PACA in regimes where p << n, i.e., in cases where the number of
 #' samples is greater than the number of features.
 #'
-#' @param X \eqn{n_1} by \eqn{m} matrix; \cr
+#' @param X \eqn{m} by \eqn{n_1} matrix; \cr
 #'          Case (foreground) input data matrix. \cr
 #'          It is recommended to normailize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
-#' @param Y \eqn{n_0} by \eqn{m} matrix; \cr
+#' @param Y \eqn{m} by \eqn{n_0} matrix; \cr
 #'          Control (foreground) input data matrix. \cr
 #'          It is recommended to normailize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
@@ -38,13 +38,21 @@
 #' @importFrom stats prcomp
 #'
 #' @rdname rPACA
+
+### TODO: SEEMS TO BE BROKEN
 paca_r <- function(X, Y, k,
                    niter = 20,
                    batch = 600,
                    rank = 5){
   X_pacacomb <- matrix(0, ncol=rank, nrow=dim(X)[2])
   X_ids <- colnames(X)
+  if (is.null(X_ids)){
+    X_ids <- seq(dim(X)[2])
+  }
   Y_ids <- colnames(Y)
+  if (is.null(Y_ids)){
+    Y_ids <- seq(dim(Y)[2])
+  }
 
   P_comb <- matrix(0, ncol=1, nrow=dim(X)[2])
   for (r in 1:niter){
@@ -54,7 +62,7 @@ paca_r <- function(X, Y, k,
     yBatch <- Y[,inY]
     xRemain <- X[,setdiff(X_ids, inX)]
 
-    pacaBatch <- doCCA(xBatch, yBatch, TRUE, 0)
+    pacaBatch <- cpp_CCA(xBatch, yBatch, TRUE, 0)
 
     U_1 <- pacaBatch$U[,1:k] / t(kronecker(matrix(1,1,dim(pacaBatch$U)[1]),sqrt(colSums(pacaBatch$U[,1:k]^2))))
     means_matrix <- t(kronecker(matrix(1,1,dim(xBatch)[1]),colMeans(xBatch)))
@@ -83,6 +91,6 @@ paca_r <- function(X, Y, k,
   eigPC <- eigen(Cmat)
 
   return(list(x = eigPC$vectors[,1:rank],
-              eigVal = eigPC$values[,1:rank]))
+              eigVal = eigPC$values[1:rank]))
 
 }

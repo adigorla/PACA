@@ -129,7 +129,7 @@ paca <- function(X, Y,
 
   colnames(tmp[['Xtil']]) <- names_list$X[['col']]
   row.names(tmp[['Xtil']]) <- names_list$X[['row']]
-  colnames(tmp[['U0']]) <- cc_names[1:dim(tmp[['U0']])[2]]
+  colnames(tmp[['U0']]) <- paste0('CC', seq(dim(tmp[['U0']])[2]))
   row.names(tmp[['U0']]) <- names_list$X[['row']]
 
   # do PCA decomp of case specific signal
@@ -162,6 +162,12 @@ paca <- function(X, Y,
 #'          This preprocessing can be done using the \code{\link{transformCCAinput}} function.
 #' @param k Positive integer, \eqn{k > 1}; \cr
 #'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
+#' @param info int, optional (default: 1); verbosity for the log generated
+#' \itemize{
+#' \item 0 : Errors and warnings only
+#' \item 1 : Basic Informational messages
+#' \item 2 : More detailed Informational messages
+#' \item 3 : Debug mode, all informational log is dumped
 #'
 #' @return non-negative real value; the variance of the top \emph{PACA} PC of the input data (\code{X}).
 #'
@@ -169,9 +175,9 @@ paca <- function(X, Y,
 #'
 #' @keywords internal
 #' @noRd
-paca_varPC1 <- function(X, Y, k){
+paca_varPC1 <- function(X, Y, k, info = 0){
 
-  res <- cpp_PACA(X, Y, k, TRUE, FALSE, 0)
+  res <- cpp_PACA(X, Y, k, TRUE, FALSE, info)
   pca.res <- rpca(t(res[['Xtil']]), k = 1, center = TRUE, scale = FALSE, q = 2)$x
 
   return(var(pca.res[,1]))
@@ -205,6 +211,12 @@ paca_varPC1 <- function(X, Y, k){
 #'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
 #' @param nperm Positive integer, optional (default \eqn{100}); \cr
 #'          Number of random permutations to build the emperical null distribution.
+#' @param info int, optional (default: 1); verbosity for the log generated
+#' \itemize{
+#' \item 0 : Errors and warnings only
+#' \item 1 : Basic Informational messages
+#' \item 2 : More detailed Informational messages
+#' \item 3 : Debug mode, all informational log is dumped
 #'
 #' @return \code{nullEvalPACA} returns a list containing the following components:
 #' \describe{
@@ -223,17 +235,17 @@ paca_varPC1 <- function(X, Y, k){
 #' @export
 #'
 #' @rdname PACA_null
-paca_null <- function(X, Y, k, nperm = 100){
+paca_null <- function(X, Y, k, nperm = 100, info = 0 ){
 
   # perp data for perm
   xy <- cbind(t(X), t(Y))
-  cat("\nStarting permutations...") # \nComb matrix dim : ", dim(xy))
+  cat("\nStarting permutations...\n") # \nComb matrix dim : ", dim(xy))
   ids <- c(1:dim(xy)[2])
   colnames(xy) <- ids
   sz <- ceiling(length(ids)/2)
 
   # Scale input for CCA
-  stdDat <- transformCCAinput(X, Y, .center = TRUE, .scale = TRUE)
+  stdDat <- transformCCAinput(X, Y, center = TRUE, scale = TRUE)
   rm(X, Y)
 
   # get point stat for selected k
@@ -242,7 +254,7 @@ paca_null <- function(X, Y, k, nperm = 100){
 
   # get dist of permuted null
   nullVars <- c()
-  for (i in 1:nPerm){
+  for (i in 1:nperm){
     inCase <- sample(ids, size=sz, replace=F)
     Xs <- xy[,inCase]
     Ys <- xy[,setdiff(ids, inCase)]
@@ -252,8 +264,10 @@ paca_null <- function(X, Y, k, nperm = 100){
     nv <- paca_varPC1(Xs, Ys, k)
 
     nullVars <- c(nullVars, nv)
-    if(i%%25 == 0){
-      cat("\n\tDone with perm ", i)
+    if (info > 1){
+      if(i%%25 == 0){
+        cat("Done with permutation: ", i, "\n")
+      }
     }
   }
 
@@ -266,7 +280,3 @@ paca_null <- function(X, Y, k, nperm = 100){
 }
 
 ###########################################################################################################
-
-
-
-

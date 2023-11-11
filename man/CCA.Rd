@@ -24,6 +24,7 @@ cca(X, Y, scale = TRUE, info = 1)
 \value{
 \code{cca} returns a list containing the following components:
 \describe{
+   \item{corr}{ the cannonical correlation of each factor}
    \item{A}{ the loadings for \eqn{X}
    }
    \item{B}{ the loadings for \eqn{Y}

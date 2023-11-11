@@ -75,16 +75,16 @@ private:
 
     switch (level) {
     case 0:
-      std::cout << "\033[1;33m";  // yellow
+      Rcpp::Rcout << "\033[1;33m";  // yellow
       break;
     case 1:
       // No color for INFO
       break;
     case 2:
-      std::cout << "\033[1m\033[36m";  // Bold Cyan
+      Rcpp::Rcout << "\033[1m\033[36m";  // Bold Cyan
       break;
     case 3:
-      std::cout << "\033[1m\033[35m";  // Bold Magenta
+      Rcpp::Rcout << "\033[1m\033[35m";  // Bold Magenta
       break;
     default:
       return;
@@ -532,7 +532,7 @@ std::mutex Logger::mtx;
 
    Logger::LogINFO("selectK: DONE");
 
-   return Rcpp::List::create(Rcpp::Named("k")=selK,
+   return Rcpp::List::create(Rcpp::Named("K")=selK,
                              Rcpp::Named("U0")=U0);
  };
 
@@ -581,6 +581,8 @@ std::mutex Logger::mtx;
    Eigen::VectorXd eigs;
    int selK, dU1;
    selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
+   Logger::LogLOG("K_est : ", selK);
+
 
    Logger::LogINFO("Residualizing Shared Signal ...");
    dU1 = U.rows();
@@ -592,7 +594,8 @@ std::mutex Logger::mtx;
 
    if (retCCA){
      return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
-                               Rcpp::Named("k")=selK,
+                               Rcpp::Named("U0")=U0,
+                               // Rcpp::Named("K")=selK,
                                Rcpp::Named("corr")=eigs,
                                Rcpp::Named("A")=A,
                                Rcpp::Named("B")=B,
@@ -600,7 +603,8 @@ std::mutex Logger::mtx;
                                Rcpp::Named("V")=V);
    }
    return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
-                             Rcpp::Named("k")=selK);
+                             // Rcpp::Named("K")=selK,
+                             Rcpp::Named("U0")=U0);
 
  };
 

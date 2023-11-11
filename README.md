@@ -70,7 +70,7 @@ print(dim(PACA.res$xtil)) # MxN
 One also has the option to run the `paca` algorithm and set a user defined `k`. This would return the unique components in the cases at the user definde `k`. The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N.  
 ``` r
 # run PACA w/ fixed k
-resPACA <- PACA(X, Y, k = 10)
+resPACA <- paca(X, Y, k = 10)
 
 # the dimension of the returned unique components of the cases
 print(dim(PACA.res$x)) # Nx10
@@ -120,7 +120,7 @@ Y <- read.table("control_data1.txt")
 
 PACA.nulltest <- paca_null(X, Y, k, nperm = 100)
 
-# p-value of rejecting the null
+# p-value of rejecting H0 there is no case specific variation PACA PC1
 print(PACA.nulltest$pval)
 ```
 The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis. Increasing `nperm` increases the precision of the `pval` estimate.
@@ -131,32 +131,36 @@ Please refer to the [PACA man page](man/PACA_null.Rd) for more detailed usage in
 <details>
 <summary>Instructions</summary>
 
-If you are using a mac and having installation issues, try installing homebrew or xcode then reinstalling **Rcpp** and **RcppArmadillo**. 
+If you are using a mac and having installation issues, try installing homebrew or xcode then reinstalling **Rcpp** and **RcppEigen**. 
 
 #### R >= 4.0+ on M1/2 Macs
-If you are having issues compiling R/Rcpp code on the newer ARM (M1/2) Mac hardware, make you have `gcc(11+)` and `llvm` installed using homebrew.
+If you are having issues compiling R/Rcpp code on the newer ARM (M1/2) Mac hardware, make you have `gcc(13+)` and `llvm` installed using homebrew.
 ``` bash 
 brew install gcc && brew install llvm 
 ```
 
 Then update the `Makevars` file in the `~/.R/` directory to the following:
 ```
-# custom G++ makevars 
+# custom g++ makevars 
 # adapeted from here: https://stackoverflow.com/questions/65860439/installing-data-table-on-macos
 
-GCC_LOC = /opt/homebrew/Cellar/gcc/11.2.0_3                    # UPATDTE & CHECK  path is valid
-FLIBS=-L$(GCC_LOC)/lib/gcc/11 -L$(GCC_LOC)/lib -lgfortran -lm
-CXX1X=$(GCC_LOC)/bin/g++-11
-CXX98=$(GCC_LOC)/bin/g++-11
-CXX11=$(GCC_LOC)/bin/g++-11
-CXX14=$(GCC_LOC)/bin/g++-11
-CXX17=$(GCC_LOC)/bin/g++-11
+GCC_LOC = /opt/homebrew/Cellar/gcc/13.1.0                      # UPATDTE & CHECK  path is valid
+FLIBS=-L$(GCC_LOC)/lib/gcc/13 -L$(GCC_LOC)/lib -lgfortran -lm
+FC=$(GCC_LOC)/bin/gfortran
+F77=$(GCC_LOC)/bin/gfortran
+CXX1X=$(GCC_LOC)/bin/g++-13
+CXX98=$(GCC_LOC)/bin/g++-13
+CXX11=$(GCC_LOC)/bin/g++-13
+CXX14=$(GCC_LOC)/bin/g++-13
+CXX17=$(GCC_LOC)/bin/g++-13
+CXX20=$(GCC_LOC)/bin/g++-13
+
 
 LLVM_LOC = /opt/homebrew/opt/llvm                              # UPATDTE & CHECK path is valid
-CC=$(GCC_LOC)/bin/gcc-11 -fopenmp
-CXX=$(GCC_LOC)/bin/g++-11 -fopenmp
+CC=$(GCC_LOC)/bin/gcc-13 -fopenmp
+CXX=$(GCC_LOC)/bin/g++-13 -fopenmp -llapack
 CFLAGS=-g -O3 -Wall -pedantic -std=gnu99 -mtune=native -pipe
-CXXFLAGS=-g -O3 -Wall -pedantic -std=c++11 -mtune=native -pipe
+CXXFLAGS=-g -O3 -Wall -pedantic -std=c++14 -mtune=native -pipe
 LDFLAGS=-L$(LLVM_LOC)/lib -Wl,-rpath,$(LLVM_LOC)/lib
 RARM_LOC = /opt/R/arm64                                        # UPATDTE & CHECK path is valid
 BREW_LOC = /opt/homebrew                                       # UPATDTE & CHECK path is valid

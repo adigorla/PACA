@@ -35,8 +35,8 @@
 transformCCAinput <- function(X, Y, center = TRUE, scale = FALSE){
 
   # Transpose and scale (by samples) the input matrix
-  x <- scale(t(X), center = .center, scale = .scale)
-  y <- scale(t(Y), center = .center, scale = .scale)
+  x <- scale(t(X), center = center, scale = scale)
+  y <- scale(t(Y), center = center, scale = scale)
 
   if ( ((sum(sum(is.na(x))) ) > 0) || ((sum(sum(is.na(y))) ) > 0)){
     stop("Division by zero due to constant features in either X or Y.")
@@ -104,7 +104,7 @@ getNames <- function(X, Y){
     col = colnames(Y),
     row = row.names(Y)
   )
-                ))
+  ))
 }
 
 ###########################################################################################################

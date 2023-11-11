@@ -7,12 +7,12 @@
 paca_r(X, Y, k, niter = 20, batch = 600, rank = 5)
 }
 \arguments{
-\item{X}{\eqn{n_1} by \eqn{m} matrix; \cr
+\item{X}{\eqn{m} by \eqn{n_1} matrix; \cr
 Case (foreground) input data matrix. \cr
 It is recommended to normailize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
-\item{Y}{\eqn{n_0} by \eqn{m} matrix; \cr
+\item{Y}{\eqn{m} by \eqn{n_0} matrix; \cr
 Control (foreground) input data matrix. \cr
 It is recommended to normailize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}

@@ -24,6 +24,7 @@
 #' }
 #'@return \code{cca} returns a list containing the following components:
 #' \describe{
+#'    \item{corr}{ the cannonical correlation of each factor}
 #'    \item{A}{ the loadings for \eqn{X}
 #'    }
 #'    \item{B}{ the loadings for \eqn{Y}
@@ -40,7 +41,7 @@ cca = function (X, Y, scale = TRUE, info = 1){
 
   names_list <- getNames(X, Y)
 
-  tmp<-doCCA(X, Y, scale, info)
+  tmp <- cpp_CCA(X, Y, scale, info)
 
   cc_names <- paste0('CC', seq(length(tmp$corr)))
   names(tmp$corr) <- cc_names
