@@ -12,4 +12,3 @@ src/*.dll
 
 # ignore intermediate test files
 tests/**/build-*.R
-tests/**/build-*.Rdata
