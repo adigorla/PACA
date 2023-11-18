@@ -40,6 +40,8 @@
 #' @rdname rPACA
 
 ### TODO: SEEMS TO BE BROKEN
+#       look for the code used in CONVERGE and sim analysis
+
 paca_r <- function(X, Y, k,
                    niter = 20,
                    batch = 600,
@@ -48,10 +50,12 @@ paca_r <- function(X, Y, k,
   X_ids <- colnames(X)
   if (is.null(X_ids)){
     X_ids <- seq(dim(X)[2])
+    colnames(X) <- X_ids
   }
   Y_ids <- colnames(Y)
   if (is.null(Y_ids)){
     Y_ids <- seq(dim(Y)[2])
+    colnames(Y) <- Y_ids
   }
 
   P_comb <- matrix(0, ncol=1, nrow=dim(X)[2])
@@ -62,19 +66,15 @@ paca_r <- function(X, Y, k,
     yBatch <- Y[,inY]
     xRemain <- X[,setdiff(X_ids, inX)]
 
-    pacaBatch <- cpp_CCA(xBatch, yBatch, TRUE, 0)
+    #### NEW
+    pacaBatch <- cpp_PACA(xBatch, yBatch, k, TRUE, FALSE, 0)
 
-    U_1 <- pacaBatch$U[,1:k] / t(kronecker(matrix(1,1,dim(pacaBatch$U)[1]),sqrt(colSums(pacaBatch$U[,1:k]^2))))
-    means_matrix <- t(kronecker(matrix(1,1,dim(xBatch)[1]),colMeans(xBatch)))
-    X_centered <- xBatch - means_matrix
-    X_tilde <- X_centered - (U_1 %*% (t(U_1) %*% X_centered)) + means_matrix
-    rm(means_matrix, X_centered)
-    pacapcBatch <- prcomp(t(X_tilde), rank. = rank, center = TRUE, scale. = T)
+    pacapcBatch <- prcomp(t(pacaBatch$Xtil), rank. = rank, center = TRUE, scale. = TRUE)
 
     means_matrix <- t(kronecker(matrix(1,1,dim(xRemain)[1]),colMeans(xRemain)))
     X_centered <- xRemain - means_matrix
-    X_tilde_remain <- X_centered - (U_1 %*% (t(U_1) %*% X_centered)) + means_matrix
-    rm(means_matrix, X_centered, U_1)
+    X_tilde_remain <- X_centered - (pacaBatch$U0 %*% (t(pacaBatch$U0) %*% X_centered)) + means_matrix
+    rm(means_matrix, X_centered)
     projMat_remain <- t(X_tilde_remain) %*% pacapcBatch$rotation
 
     pacapcBatch <- scale(pacapcBatch$x , center = TRUE, scale = T)
@@ -82,7 +82,32 @@ paca_r <- function(X, Y, k,
     comb_proj <- rbind(pacapcBatch, projMat_remain)
     P_comb <- cbind(P_comb, comb_proj[X_ids,])
     X_pacacomb <- comb_proj[X_ids,] + X_pacacomb
-    rm(comb_proj, X_tilde_remain, X_tilde)
+    rm(comb_proj, X_tilde_remain)
+
+
+    ####
+
+    # pacaBatch <- cpp_CCA(xBatch, yBatch, TRUE, 0)
+    #
+    # U_1 <- pacaBatch$U[,1:k] / t(kronecker(matrix(1,1,dim(pacaBatch$U)[1]),sqrt(colSums(pacaBatch$U[,1:k]^2))))
+    # means_matrix <- t(kronecker(matrix(1,1,dim(xBatch)[1]),colMeans(xBatch)))
+    # X_centered <- xBatch - means_matrix
+    # X_tilde <- X_centered - (U_1 %*% (t(U_1) %*% X_centered)) + means_matrix
+    # rm(means_matrix, X_centered)
+    # pacapcBatch <- prcomp(t(X_tilde), rank. = rank, center = TRUE, scale. = T)
+    #
+    # means_matrix <- t(kronecker(matrix(1,1,dim(xRemain)[1]),colMeans(xRemain)))
+    # X_centered <- xRemain - means_matrix
+    # X_tilde_remain <- X_centered - (U_1 %*% (t(U_1) %*% X_centered)) + means_matrix
+    # rm(means_matrix, X_centered, U_1)
+    # projMat_remain <- t(X_tilde_remain) %*% pacapcBatch$rotation
+    #
+    # pacapcBatch <- scale(pacapcBatch$x , center = TRUE, scale = T)
+    # projMat_remain <- scale(projMat_remain , center = TRUE, scale = T)
+    # comb_proj <- rbind(pacapcBatch, projMat_remain)
+    # P_comb <- cbind(P_comb, comb_proj[X_ids,])
+    # X_pacacomb <- comb_proj[X_ids,] + X_pacacomb
+    # rm(comb_proj, X_tilde_remain, X_tilde)
 
     cat("\n\tCompleted Random Sampling Iter:", r,"/",niter,"\n")
   }
