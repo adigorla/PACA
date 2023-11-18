@@ -11,5 +11,13 @@ src/*.dll
 **/.Rhistory
 
 # ignore intermediate test files
-tests/**/build-*.R
-tests/**/*.Rdata
+# tests/**/build-*.R
+**/testdata
+
+# Session Data files
+.RData
+.RDataTmp
+
+# User-specific files
+.Ruserdata
+
