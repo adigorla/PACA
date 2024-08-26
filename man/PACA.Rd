@@ -27,7 +27,7 @@ Control (foreground) input data matrix. \cr
 Note: this input data needs to be scaled along the samples axis before being provided as input.
 This preprocessing can be done using the \code{\link{transformCCAinput}} function.}
 
-\item{k}{positive scalar, optional (default: \eqn{NULL}); \cr
+\item{k}{positive integer, optional (default: \eqn{NULL}); \cr
 Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
 When \eqn{k = NULL} (default), K is automatically infered, i.e, we run autoPACA by default.}
 
@@ -43,13 +43,12 @@ which indicates the presence of residual shared variation in X.}
 \item{ccweights}{bool, optional (default \eqn{FALSE}); \cr
 If \eqn{TRUE}, return the \emph{PACA} corrected case data (\code{xtil}) ONLY.}
 
-\item{info}{int, optional (default: 1); verbosity for the log generated
-\itemize{
-\item 0 : Errors and warnings only
-\item 1 : Basic Informational messages
-\item 2 : More detailed Informational messages
-\item 3 : Debug mode, all informational log is dumped
-}}
+\item{info}{Integer, optional (default: 0); \cr
+Verbosity level for the log generated. \cr
+0: Errors and warnings only \cr
+1: Basic informational messages \cr
+2: More detailed informational messages \cr
+3: Debug mode, all informational log is dumped}
 }
 \value{
 By default, \code{paca} returns a list containing the following components:

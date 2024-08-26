@@ -4,27 +4,34 @@
 \alias{paca_null}
 \title{PACA Null Case Evaluation (paca_null)}
 \usage{
-paca_null(X, Y, k, nperm = 100)
+paca_null(X, Y, k, nperm = 100, info = 0)
 }
 \arguments{
 \item{X}{\eqn{n_1} by \eqn{m} matrix; \cr
 Case (foreground) input data matrix. \cr
-It is recommended to normailize the feature scales as appropriate for the data modality.
+It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
 \item{Y}{\eqn{n_0} by \eqn{m} matrix; \cr
-Control (foreground) input data matrix. \cr
-It is recommended to normailize the feature scales as appropriate for the data modality.
+Control (background) input data matrix. \cr
+It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
 \item{k}{Positive integer, \eqn{k > 1}; \cr
 Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.}
 
 \item{nperm}{Positive integer, optional (default \eqn{100}); \cr
-Number of random permutations to build the emperical null distribution.}
+Number of random permutations to build the empirical null distribution.}
+
+\item{info}{Integer, optional (default: 0); \cr
+Verbosity level for the log generated. \cr
+0: Errors and warnings only \cr
+1: Basic informational messages \cr
+2: More detailed informational messages \cr
+3: Debug mode, all informational log is dumped}
 }
 \value{
-\code{nullEvalPACA} returns a list containing the following components:
+\code{paca_null} returns a list containing the following components:
 \describe{
    \item{pval}{     non-negative real value; \cr
                     the significance of rejecting the null hypothesis that there is no subphenotypic structure in the case data \code{X}.
@@ -32,15 +39,14 @@ Number of random permutations to build the emperical null distribution.}
    \item{empVar}{   non-negative real value; \cr
                     the variance of the top \emph{PACA} PC of the case data (\code{xtil}).
    }
-
-   \item{nullVars}{ list of size \eqn{nPerm}; \cr
+   \item{nullVars}{ list of size \eqn{nperm}; \cr
                     the variances of the top \emph{PACA} PC of each of the permuted null data.
    }
 }
 }
 \description{
-This method applies a simple case/control label permutation approach to qunatify the
-statistical significance of the presence of subphenotypic variation the cases, a givne fixed \eqn{k}.
-The procedure should be able to reject the null (no subphenotypic variation) when there is sufficently
+This method applies a simple case/control label permutation approach to quantify the
+statistical significance of the presence of subphenotypic variation in the cases, given a fixed \eqn{k}.
+The procedure should be able to reject the null (no subphenotypic variation) when there is sufficiently
 strong variation unique to the cases.
 }

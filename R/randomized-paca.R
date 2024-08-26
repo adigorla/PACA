@@ -42,7 +42,7 @@
 ### TODO: SEEMS TO BE BROKEN
 #       look for the code used in CONVERGE and sim analysis
 
-paca_r <- function(X, Y, k,
+rpaca <- function(X, Y, k,
                    niter = 20,
                    batch = 600,
                    rank = 5){
@@ -109,8 +109,9 @@ paca_r <- function(X, Y, k,
     # X_pacacomb <- comb_proj[X_ids,] + X_pacacomb
     # rm(comb_proj, X_tilde_remain, X_tilde)
 
-    cat("\n\tCompleted Random Sampling Iter:", r,"/",niter,"\n")
+    cat("\n\tCompleted Random Sampling Iter: comp ", r,"/ iter ",niter,"\n")
   }
+  # TODO: Make sure its consistent w/ the sim res algo
   P_comb <- P_comb[,-1]
   Cmat <- P_comb %*% t(P_comb)
   eigPC <- eigen(Cmat)

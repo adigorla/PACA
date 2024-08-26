@@ -6,21 +6,25 @@ normalizeCPP <- function(x, inplace = TRUE) {
 }
 
 #' @export
+#' @noRd
 cpp_CCA <- function(X, Y, normalize = TRUE, verbosity = 1L) {
     .Call(`_PACA_cpp_CCA`, X, Y, normalize, verbosity)
 }
 
 #' @export
+#' @noRd
 cpp_selectK <- function(X, Y, normalize = TRUE, threshold = 10.0, verbosity = 1L) {
     .Call(`_PACA_cpp_selectK`, X, Y, normalize, threshold, verbosity)
 }
 
 #' @export
+#' @noRd
 cpp_PACA <- function(X, Y, k, normalize = TRUE, retCCA = FALSE, verbosity = 1L) {
     .Call(`_PACA_cpp_PACA`, X, Y, k, normalize, retCCA, verbosity)
 }
 
 #' @export
+#' @noRd
 cpp_autoPACA <- function(X, Y, normalize = TRUE, retCCA = FALSE, threshold = 10.0, verbosity = 1L) {
     .Call(`_PACA_cpp_autoPACA`, X, Y, normalize, retCCA, threshold, verbosity)
 }

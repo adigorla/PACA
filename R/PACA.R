@@ -21,7 +21,7 @@
 #'          Control (foreground) input data matrix. \cr
 #'          Note: this input data needs to be scaled along the samples axis before being provided as input.
 #'          This preprocessing can be done using the \code{\link{transformCCAinput}} function.
-#' @param k positive scalar, optional (default: \eqn{NULL}); \cr
+#' @param k positive integer, optional (default: \eqn{NULL}); \cr
 #'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
 #'          When \eqn{k = NULL} (default), K is automatically infered, i.e, we run autoPACA by default.
 #' @param scale bool, optional (default: \eqn{TRUE}); normalize (center+scale) each matrix column-wise
@@ -33,13 +33,12 @@
 #'
 #' @param ccweights bool, optional (default \eqn{FALSE}); \cr
 #'                  If \eqn{TRUE}, return the \emph{PACA} corrected case data (\code{xtil}) ONLY.
-#' @param info int, optional (default: 1); verbosity for the log generated
-#' \itemize{
-#' \item 0 : Errors and warnings only
-#' \item 1 : Basic Informational messages
-#' \item 2 : More detailed Informational messages
-#' \item 3 : Debug mode, all informational log is dumped
-#' }
+#' @param info Integer, optional (default: 0); \cr
+#'          Verbosity level for the log generated. \cr
+#'          0: Errors and warnings only \cr
+#'          1: Basic informational messages \cr
+#'          2: More detailed informational messages \cr
+#'          3: Debug mode, all informational log is dumped
 #'
 #'@return By default, \code{paca} returns a list containing the following components:
 #' \describe{
@@ -92,6 +91,15 @@ paca <- function(X, Y,
                  thrsh = 10.0,
                  ccweights = FALSE,
                  info = 1){
+  # input shape check
+  if(dim(X)[1] != dim(Y)[1]){
+    stop(sprintf("RowSize X (", dim(X)[1], ") is NOT equal to RowSize Y (",
+                 dim(Y)[1], ")\nInput matrices should have shape:
+                 features-by-samples (MxN) where M size should match"
+                 )
+         )
+  }
+
   names_list <- getNames(X, Y)
 
   if (is.null(k)){ # run autoPACA
@@ -192,33 +200,33 @@ paca_varPC1 <- function(X, Y, k, info = 0){
 #' @name paca_null
 #'
 #' @description
-#' This method applies a simple case/control label permutation approach to qunatify the
-#' statistical significance of the presence of subphenotypic variation the cases, a givne fixed \eqn{k}.
-#' The procedure should be able to reject the null (no subphenotypic variation) when there is sufficently
+#' This method applies a simple case/control label permutation approach to quantify the
+#' statistical significance of the presence of subphenotypic variation in the cases, given a fixed \eqn{k}.
+#' The procedure should be able to reject the null (no subphenotypic variation) when there is sufficiently
 #' strong variation unique to the cases.
 #'
-#' @usage paca_null(X, Y, k, nperm = 100)
+#' @usage paca_null(X, Y, k, nperm = 100, info = 0)
 #'
 #' @param X \eqn{n_1} by \eqn{m} matrix; \cr
 #'          Case (foreground) input data matrix. \cr
-#'          It is recommended to normailize the feature scales as appropriate for the data modality.
+#'          It is recommended to normalize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
 #' @param Y \eqn{n_0} by \eqn{m} matrix; \cr
-#'          Control (foreground) input data matrix. \cr
-#'          It is recommended to normailize the feature scales as appropriate for the data modality.
+#'          Control (background) input data matrix. \cr
+#'          It is recommended to normalize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
 #' @param k Positive integer, \eqn{k > 1}; \cr
 #'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
 #' @param nperm Positive integer, optional (default \eqn{100}); \cr
-#'          Number of random permutations to build the emperical null distribution.
-#' @param info int, optional (default: 1); verbosity for the log generated
-#' \itemize{
-#' \item 0 : Errors and warnings only
-#' \item 1 : Basic Informational messages
-#' \item 2 : More detailed Informational messages
-#' \item 3 : Debug mode, all informational log is dumped
+#'          Number of random permutations to build the empirical null distribution.
+#' @param info Integer, optional (default: 0); \cr
+#'          Verbosity level for the log generated. \cr
+#'          0: Errors and warnings only \cr
+#'          1: Basic informational messages \cr
+#'          2: More detailed informational messages \cr
+#'          3: Debug mode, all informational log is dumped
 #'
-#' @return \code{nullEvalPACA} returns a list containing the following components:
+#' @return \code{paca_null} returns a list containing the following components:
 #' \describe{
 #'    \item{pval}{     non-negative real value; \cr
 #'                     the significance of rejecting the null hypothesis that there is no subphenotypic structure in the case data \code{X}.
@@ -226,16 +234,15 @@ paca_varPC1 <- function(X, Y, k, info = 0){
 #'    \item{empVar}{   non-negative real value; \cr
 #'                     the variance of the top \emph{PACA} PC of the case data (\code{xtil}).
 #'    }
-#'
-#'    \item{nullVars}{ list of size \eqn{nPerm}; \cr
+#'    \item{nullVars}{ list of size \eqn{nperm}; \cr
 #'                     the variances of the top \emph{PACA} PC of each of the permuted null data.
 #'    }
-#'}
+#' }
 #'
 #' @export
 #'
-#' @rdname PACA_null
-paca_null <- function(X, Y, k, nperm = 100, info = 0 ){
+#' @rdname PACAnull
+paca_null <- function(X, Y, k, nperm = 100, info = 0){
 
   # perp data for perm
   xy <- cbind(t(X), t(Y))
@@ -249,7 +256,7 @@ paca_null <- function(X, Y, k, nperm = 100, info = 0 ){
   rm(X, Y)
 
   # get point stat for selected k
-  empVar <- paca_varPC1(stdDat$x, stdDat$y, k)
+  empVar <- paca_varPC1(stdDat$x, stdDat$y, k, info = info)
   rm(stdDat)
 
   # get dist of permuted null

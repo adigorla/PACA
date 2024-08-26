@@ -126,7 +126,7 @@ private:
 
 ////////////////////////////////// Helpers //////////////////////////////////
 
-// [[Rcpp::export]]
+// [[Rcpp::export(normalizeCPP)]]
 Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace = true) {
   // col means
   Eigen::VectorXd xmeans = x.colwise().mean();
@@ -231,10 +231,13 @@ Eigen::MatrixXd correctedMat_calc(Eigen::MatrixXd& UV, Eigen::MatrixXd& XY,  boo
 };
 
 Eigen::VectorXd topPC_loading(Eigen::MatrixXd& A){
-  A = centerCPP(A);
+  A = centerCPP(A); // alt normalizeCPP
   Eigen::BDCSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);  // Perform SVD
 
-  Eigen::VectorXd loadings = svd.matrixV().col(0);  // The first column corresponds to the loadings of the top PC
+  Eigen::VectorXd loadings = svd.matrixV().col(0);  // The first column corresponds to the loadings of the top PC // * sqrt(svd.singularValues()(0))
+  Logger::LogDEBUG("tPCl stats { Vdim: ", svd.matrixV().rows(), " x ", svd.matrixV().cols(), " S(0): ", svd.singularValues()(0),
+                   "Udim: ", svd.matrixU().rows(), " x ", svd.matrixU().cols()," }");
+  // TODO: Seems like the sqrt(S0) is the var of the projection, is var of proj on the loading the sqrt of the singular value????=
   return loadings;
 };
 
@@ -499,114 +502,118 @@ std::mutex Logger::mtx;
 
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::List cpp_CCA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, int verbosity = 1) {
-   Logger::SetVerbosity(verbosity);
+//' @noRd
+// [[Rcpp::export(cpp_CCA)]]
+Rcpp::List cpp_CCA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, int verbosity = 1) {
+ Logger::SetVerbosity(verbosity);
 
-   Eigen::MatrixXd A, B, U, V;
-   Eigen::VectorXd eigs;
-   doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
+ Eigen::MatrixXd A, B, U, V;
+ Eigen::VectorXd eigs;
+ doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
 
-   Logger::LogINFO("CCA: DONE");
+ Logger::LogINFO("CCA: DONE");
 
-   return Rcpp::List::create(Rcpp::Named("corr")=eigs,
+ return Rcpp::List::create(Rcpp::Named("corr")=eigs,
+                           Rcpp::Named("A")=A,
+                           Rcpp::Named("B")=B,
+                           Rcpp::Named("U")=U,
+                           Rcpp::Named("V")=V);
+};
+
+
+//' @export
+//' @noRd
+// [[Rcpp::export(cpp_selectK)]]
+Rcpp::List cpp_selectK(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, double threshold  = 10.0, int verbosity = 1){
+ Logger::SetVerbosity(verbosity);
+
+ Logger::LogINFO("selectK: Starting ...");
+ Eigen::MatrixXd A, B, U, V;
+ Eigen::VectorXd eigs;
+ int selK, dU1;
+ selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
+ dU1 = U.rows();
+ Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
+
+ Logger::LogINFO("selectK: DONE");
+
+ return Rcpp::List::create(Rcpp::Named("K")=selK,
+                           Rcpp::Named("U0")=U0);
+};
+
+
+//' @export
+//' @noRd
+// [[Rcpp::export(cpp_PACA)]]
+Rcpp::List cpp_PACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int k, bool normalize = true, bool retCCA = false, int verbosity = 1){
+ Logger::SetVerbosity(verbosity);
+
+ Logger::LogINFO("PACA: Starting ...");
+ // perform CCA
+ Eigen::MatrixXd A, B, U, V;
+ Eigen::VectorXd eigs;
+ doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
+ Logger::LogLOG("Done with CCA");
+
+ Logger::LogINFO("Residualizing Shared Signal ...");
+ int dU1 = U.rows();
+ Eigen::MatrixXd U0 = UV1_calc(U, k, dU1);
+ Eigen::MatrixXd Xtil = correctedMat_calc(U0, X, false);
+
+ Logger::LogINFO("PACA: DONE");
+
+ if (retCCA){
+   return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
+                             Rcpp::Named("U0")=U0,
+                             Rcpp::Named("corr")=eigs,
                              Rcpp::Named("A")=A,
                              Rcpp::Named("B")=B,
                              Rcpp::Named("U")=U,
                              Rcpp::Named("V")=V);
- };
+ }
+ return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
+                           Rcpp::Named("U0")=U0);
+};
 
 
 //' @export
- // [[Rcpp::export]]
- Rcpp::List cpp_selectK(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, double threshold  = 10.0, int verbosity = 1){
-   Logger::SetVerbosity(verbosity);
+//' @noRd
+// [[Rcpp::export(cpp_autoPACA)]]
+Rcpp::List cpp_autoPACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, bool retCCA = false, double threshold = 10.0, int verbosity = 1){
+ Logger::SetVerbosity(verbosity);
 
-   Logger::LogINFO("selectK: Starting ...");
-   Eigen::MatrixXd A, B, U, V;
-   Eigen::VectorXd eigs;
-   int selK, dU1;
-   selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
-   dU1 = U.rows();
-   Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
-
-   Logger::LogINFO("selectK: DONE");
-
-   return Rcpp::List::create(Rcpp::Named("K")=selK,
-                             Rcpp::Named("U0")=U0);
- };
+ Logger::LogINFO("autoPACA: Starting ...");
+ // perform CCA + select K
+ Eigen::MatrixXd A, B, U, V;
+ Eigen::VectorXd eigs;
+ int selK, dU1;
+ selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
+ Logger::LogLOG("K_est : ", selK);
 
 
-//' @export
- // [[Rcpp::export]]
- Rcpp::List cpp_PACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int k, bool normalize = true, bool retCCA = false, int verbosity = 1){
-   Logger::SetVerbosity(verbosity);
+ Logger::LogINFO("Residualizing Shared Signal ...");
+ dU1 = U.rows();
+ Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
+ Eigen::MatrixXd Xtil = correctedMat_calc(U0, X, false);
 
-   Logger::LogINFO("PACA: Starting ...");
-   // perform CCA
-   Eigen::MatrixXd A, B, U, V;
-   Eigen::VectorXd eigs;
-   doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
-   Logger::LogLOG("Done with CCA");
 
-   Logger::LogINFO("Residualizing Shared Signal ...");
-   int dU1 = U.rows();
-   Eigen::MatrixXd U0 = UV1_calc(U, k, dU1);
-   Eigen::MatrixXd Xtil = correctedMat_calc(U0, X, false);
+ Logger::LogINFO("autoPACA: DONE");
 
-   Logger::LogINFO("PACA: DONE");
-
-   if (retCCA){
-     return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
-                               Rcpp::Named("U0")=U0,
-                               Rcpp::Named("corr")=eigs,
-                               Rcpp::Named("A")=A,
-                               Rcpp::Named("B")=B,
-                               Rcpp::Named("U")=U,
-                               Rcpp::Named("V")=V);
-   }
+ if (retCCA){
    return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
-                             Rcpp::Named("U0")=U0);
- };
-
-
-//' @export
- // [[Rcpp::export]]
- Rcpp::List cpp_autoPACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, bool retCCA = false, double threshold = 10.0, int verbosity = 1){
-   Logger::SetVerbosity(verbosity);
-
-   Logger::LogINFO("autoPACA: Starting ...");
-   // perform CCA + select K
-   Eigen::MatrixXd A, B, U, V;
-   Eigen::VectorXd eigs;
-   int selK, dU1;
-   selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
-   Logger::LogLOG("K_est : ", selK);
-
-
-   Logger::LogINFO("Residualizing Shared Signal ...");
-   dU1 = U.rows();
-   Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
-   Eigen::MatrixXd Xtil = correctedMat_calc(U0, X, false);
-
-
-   Logger::LogINFO("autoPACA: DONE");
-
-   if (retCCA){
-     return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
-                               Rcpp::Named("U0")=U0,
-                               // Rcpp::Named("K")=selK,
-                               Rcpp::Named("corr")=eigs,
-                               Rcpp::Named("A")=A,
-                               Rcpp::Named("B")=B,
-                               Rcpp::Named("U")=U,
-                               Rcpp::Named("V")=V);
-   }
-   return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
+                             Rcpp::Named("U0")=U0,
                              // Rcpp::Named("K")=selK,
-                             Rcpp::Named("U0")=U0);
+                             Rcpp::Named("corr")=eigs,
+                             Rcpp::Named("A")=A,
+                             Rcpp::Named("B")=B,
+                             Rcpp::Named("U")=U,
+                             Rcpp::Named("V")=V);
+ }
+ return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
+                           // Rcpp::Named("K")=selK,
+                           Rcpp::Named("U0")=U0);
 
- };
+};
 
 
 // TODO : autorPACA, rPACA

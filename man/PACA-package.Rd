@@ -18,8 +18,8 @@ Phenotype Aware Components Analysis (PACA) is a contrastive learning approach le
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/Adigorla/PACA}
-  \item Report bugs at \url{https://github.com/Adigorla/PACA/issues}
+  \item \url{https://github.com/adigorla/PACA}
+  \item Report bugs at \url{https://github.com/adigorla/PACA/issues}
 }
 
 }

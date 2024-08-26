@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 ![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
-![release: v0.2.0](https://img.shields.io/badge/release-v0.2.0-green)
+![release: v0.2.0](https://img.shields.io/badge/release-v0.2.5-yellow)
 ![coverage: 100%](https://img.shields.io/badge/coverage-80%25-brightgreen)
 ![docs: in-progress](https://img.shields.io/badge/docs-in--progress-yellow)
 <!-- badges: end -->
@@ -52,17 +52,17 @@ Y <- read.table("control_data1.txt")
 > X <- t(X)
 > Y <- t(Y)
 > ```
-The input data, `X` & `Y` needs to be of the form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis, e.g. quantile normalization for RNAseq data. 
-NOTE: for all examples we assume the the number of samples, N, is the same for cases and controls for simplicity. In reality, the number if cases and controls can be different. `paca` only requires the number of features, M, to be the same and alinged in the case/control data.
+The input data, `X` & `Y` needs to be of the form features-by-samples (MxN), where M >> N. The data also need to be standardized along the feature axis, e.g. quantile normalization for RNAseq data. 
+NOTE: for all examples we assume the the number of samples, N, is the same for cases and controls for simplicity. In reality, the number of cases and controls can be different. `paca` only requires the number of features, M, to be the same and alinged in the case/control data.
 
 ``` r
 # run PACA (and infer k)
 PACA.res <- paca(X, Y)
 
-# the dimension of the returned unique components of the cases
-print(dim(PACA.res$x)) # Nxk
+# return the top 5 (defult rank) unique components of the case data
+print(dim(PACA.res$x)) # Nx5
 
-# the dimension of the corrected case data
+# return the corrected case data
 print(dim(PACA.res$xtil)) # MxN
 
 ```
@@ -72,8 +72,8 @@ One also has the option to run the `paca` algorithm and set a user defined `k`. 
 # run PACA w/ fixed k
 resPACA <- paca(X, Y, k = 10)
 
-# the dimension of the returned unique components of the cases
-print(dim(PACA.res$x)) # Nx10
+# return the top 5 (defult rank) unique components of the cases, after correcting for the top 10 shared components
+print(dim(PACA.res$x)) # Nx5
 
 # the dimension of the corrected case data
 print(dim(PACA.res$xtil)) # MxN
@@ -97,7 +97,7 @@ The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M
 
 ``` r
 # run paca_r
-rPACA.res <- paca_r(X, Y, k = 10, niter = 20, batch = 600, rank = 4)
+rPACA.res <- rpaca(X, Y, k = 10, niter = 20, batch = 600, rank = 4)
 
 # the dimension of the returned unique components of the cases
 print(dim(rPACA.res$x))
@@ -176,6 +176,17 @@ For all older versions of R and Intel Mac installation issues, please refer to t
 PACA is publicly released under the GPL-3.0 license (full license text found [here](LICENSE.md)). Note however that the programs it calls may be subject to different licenses. Users are responsible for checking that they are authorized to run all programs before running this script.
 
 ## Citation
-Gorla, Aditya, *et al*. "[Phenotypic subtyping via contrastive learning](https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1)" **biorxiv** (2023).
+If you use this software in your research, please cite our work as follows:
+```
+@article{gorla2023paca,
+    author = {Gorla, Aditya and Sankararaman, Sriram and Burchard, Esteban and Flint, Jonathan and Zaitlen, Noah and Rahmani, Elior},
+    title = {Phenotypic subtyping via contrastive learning},
+    journal = {bioRxiv},
+    year = {2023},
+    doi = {10.1101/2023.01.05.522921},
+    URL = {https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1}
+}
+```
+Gorla, *et al*. "[Phenotypic subtyping via contrastive learning](https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1)" **biorxiv** (2023).
 
 

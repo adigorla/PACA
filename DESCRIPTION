@@ -1,7 +1,7 @@
 Package: PACA
 Type: Package
 Title: Phenotype Aware Components Analysis
-Version: 0.2.0
+Version: 0.2.5
 Date: 2022-12-28
 Authors@R: person("Aditya", "Gorla", email = "adityagorla@ucla.edu",role = c("aut", "cre"))
 Description: Phenotype Aware Components Analysis (PACA) is a contrastive learning approach leveraging canonical 
@@ -17,8 +17,8 @@ Imports:
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.2.3
 Encoding: UTF-8
-URL: https://github.com/Adigorla/PACA
-BugReports: https://github.com/Adigorla/PACA/issues
+URL: https://github.com/adigorla/PACA
+BugReports: https://github.com/adigorla/PACA/issues
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
