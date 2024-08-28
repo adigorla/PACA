@@ -28,7 +28,7 @@ Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approac
 You can install **PACA** using *devtools*:
 
 ``` r
-devtools::install_github("Adigorla/PACA")
+devtools::install_github("adigorla/PACA")
 ```
 
 Please see troubleshooting at the bottom for compilation issues.
@@ -115,8 +115,8 @@ The `paca_null` algorithm allows users to test for the statistical significance 
 library(PACA)
 
 # load data
-X <- read.table("case_data1.txt")
-Y <- read.table("control_data1.txt")
+X <- read.table("case_data1.txt")     # NxM -> MxN
+Y <- read.table("control_data1.txt")  # NxM -> MxN
 
 PACA.nulltest <- paca_null(X, Y, k, nperm = 100)
 

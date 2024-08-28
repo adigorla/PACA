@@ -24,7 +24,7 @@
 #' @param k positive integer, optional (default: \eqn{NULL}); \cr
 #'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
 #'          When \eqn{k = NULL} (default), K is automatically infered, i.e, we run autoPACA by default.
-#' @param scale bool, optional (default: \eqn{TRUE}); normalize (center+scale) each matrix column-wise
+#' @param scale bool, optional (default: \eqn{FALSE}); normalize (center+scale) each matrix column-wise
 #' @param rank Positive integer, optional (default \eqn{2}); \cr
 #'               Number of dominant principle components to be computed for the corrected case data.
 #' @param thrsh Positive real value, optional (default \eqn{10}); \cr
@@ -54,6 +54,8 @@
 #'    \item{rotation}{  \eqn{m} by \eqn{rank} matrix; \cr
 #'                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{Xtil}).
 #'    }
+#'    \item{k}{         the number of shared components removed, int
+#'    }
 #'}
 #'@return When \eqn{ccweights = TRUE}, \code{paca} returns a list containing the CCA direction and variates along withe the \emph{PACA} principle components:
 #' \describe{
@@ -69,6 +71,8 @@
 #'    \item{rotation}{\eqn{m} by \eqn{rank} matrix; \cr
 #'                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{Xtil}).
 #'    }
+#'    \item{k}{        the number of shared components removed, int
+#'    }
 #'    \item{A}{       the loadings for \eqn{X}
 #'    }
 #'    \item{B}{       the loadings for \eqn{Y}
@@ -81,12 +85,10 @@
 #'
 #' @export
 #'
-#' @importFrom rsvd rpca
-#'
 #' @rdname PACA
 paca <- function(X, Y,
                  k = NULL,
-                 scale = TRUE,
+                 scale = FALSE,
                  rank = 5,
                  thrsh = 10.0,
                  ccweights = FALSE,
@@ -118,6 +120,7 @@ paca <- function(X, Y,
       row.names(tmp[['V']]) <- names_list$Y[['row']]
     }
   } else{ # run PACA with fixed K
+    print("running w/ fixed k")
     tmp <- cpp_PACA(X, Y, k, scale, ccweights, info)
     if(ccweights){
       cc_names <- paste0('CC', seq(length(tmp$corr)))
@@ -131,6 +134,9 @@ paca <- function(X, Y,
       row.names(tmp[['B']]) <- names_list$Y[['col']]
       row.names(tmp[['U']]) <- names_list$X[['row']]
       row.names(tmp[['V']]) <- names_list$Y[['row']]
+      row.names(tmp[['Cxx']]) <- names_list$X[['col']]
+      row.names(tmp[['Cyy']]) <- names_list$Y[['col']]
+      row.names(tmp[['Cxy']]) <- names_list$X[['col']]
     }
 
   }
@@ -141,7 +147,8 @@ paca <- function(X, Y,
   row.names(tmp[['U0']]) <- names_list$X[['row']]
 
   # do PCA decomp of case specific signal
-  pca.res <- rpca(t(tmp[['Xtil']]), k = rank, center = TRUE, scale = FALSE, q = 2)
+  # pca.res <- prcomp(t(tmp[['Xtil']]), rank.= rank)
+  pca.res <- eigenprcomp(t(tmp[['Xtil']]), rank = rank, info = info)
   tmp$x <- pca.res$x
   tmp$rotation <- pca.res$rotation
 
@@ -170,12 +177,12 @@ paca <- function(X, Y,
 #'          This preprocessing can be done using the \code{\link{transformCCAinput}} function.
 #' @param k Positive integer, \eqn{k > 1}; \cr
 #'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
-#' @param info int, optional (default: 1); verbosity for the log generated
-#' \itemize{
-#' \item 0 : Errors and warnings only
-#' \item 1 : Basic Informational messages
-#' \item 2 : More detailed Informational messages
-#' \item 3 : Debug mode, all informational log is dumped
+#' @param info Integer, optional (default: 0); \cr
+#'          Verbosity level for the log generated. \cr
+#'          0: Errors and warnings only \cr
+#'          1: Basic informational messages \cr
+#'          2: More detailed informational messages \cr
+#'          3: Debug mode, all informational log is dumped
 #'
 #' @return non-negative real value; the variance of the top \emph{PACA} PC of the input data (\code{X}).
 #'
@@ -186,7 +193,8 @@ paca <- function(X, Y,
 paca_varPC1 <- function(X, Y, k, info = 0){
 
   res <- cpp_PACA(X, Y, k, TRUE, FALSE, info)
-  pca.res <- rpca(t(res[['Xtil']]), k = 1, center = TRUE, scale = FALSE, q = 2)$x
+  pca.res <- eigenprcomp(t(res[['Xtil']]), rank = rank, info = info)$x
+  # pca.res <- rpca(t(res[['Xtil']]), k = 1, center = TRUE, scale = FALSE, q = 2)$x
 
   return(var(pca.res[,1]))
 }

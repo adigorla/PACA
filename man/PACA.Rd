@@ -8,7 +8,7 @@ paca(
   X,
   Y,
   k = NULL,
-  scale = TRUE,
+  scale = FALSE,
   rank = 5,
   thrsh = 10,
   ccweights = FALSE,
@@ -31,7 +31,7 @@ This preprocessing can be done using the \code{\link{transformCCAinput}} functio
 Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
 When \eqn{k = NULL} (default), K is automatically infered, i.e, we run autoPACA by default.}
 
-\item{scale}{bool, optional (default: \eqn{TRUE}); normalize (center+scale) each matrix column-wise}
+\item{scale}{bool, optional (default: \eqn{FALSE}); normalize (center+scale) each matrix column-wise}
 
 \item{rank}{Positive integer, optional (default \eqn{2}); \cr
 Number of dominant principle components to be computed for the corrected case data.}
@@ -65,6 +65,8 @@ By default, \code{paca} returns a list containing the following components:
    \item{rotation}{  \eqn{m} by \eqn{rank} matrix; \cr
                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{Xtil}).
    }
+   \item{k}{         the number of shared components removed, int
+   }
 }
 
 When \eqn{ccweights = TRUE}, \code{paca} returns a list containing the CCA direction and variates along withe the \emph{PACA} principle components:
@@ -80,6 +82,8 @@ When \eqn{ccweights = TRUE}, \code{paca} returns a list containing the CCA direc
    }
    \item{rotation}{\eqn{m} by \eqn{rank} matrix; \cr
                      the rotation (eigenvectors)  of the \emph{PACA} corrected case data (\code{Xtil}).
+   }
+   \item{k}{        the number of shared components removed, int
    }
    \item{A}{       the loadings for \eqn{X}
    }

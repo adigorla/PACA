@@ -1,5 +1,85 @@
 ###########################################################################################################
 
+#' @title Principal Components Analysis using RcppEigen
+#'
+#' @description
+#' This function performs a principal components analysis on the given data matrix
+#' using an efficient RcppEigen implementation. It returns the results as a list containing
+#' various components of the PCA.
+#'
+#' @param x A numeric matrix or data frame which provides the data for the
+#'          principal components analysis.
+#' @param center A logical value indicating whether the variables should be
+#'               shifted to be zero centered. Alternately, a vector of length
+#'               equal the number of columns of x can be supplied. The value
+#'               is passed to scale.
+#' @param scale A logical value indicating whether the variables should be
+#'              scaled to have unit variance before the analysis takes place.
+#'              Alternatively, a vector of length equal the number of columns
+#'              of x can be supplied. The value is passed to scale.
+#' @param rank A positive integer specifying the desired rank (i.e., number
+#'             of principal components to be computed).
+#' @param tol A threshold for omitting principal components (see Details).
+#' @param info Integer, optional (default: 0); \cr
+#'          Verbosity level for the log generated. \cr
+#'          0: Errors and warnings only \cr
+#'          1: Basic informational messages \cr
+#'          2: More detailed informational messages \cr
+#'          3: Debug mode, all informational log is dumped
+#'
+#' @return A list with class "prcomp" containing the following components:
+#' \describe{
+#'   \item{sdev}{The standard deviations of the principal components.}
+#'   \item{rotation}{The matrix of variable loadings (eigenvectors).}
+#'   \item{x}{The rotated data (the centred, scaled data multiplied by the rotation matrix).}
+#'   \item{center}{The centering used, or FALSE.}
+#'   \item{scale}{The scaling used, or FALSE.}
+#' }
+#'
+#' @details
+#' The calculation is done using singular value decomposition of the (centered
+#' and scaled) data matrix. This is generally the preferred method for numerical
+#' accuracy. The `tol` parameter can be used to omit components whose standard
+#' deviations are less than or equal to `tol` times the standard deviation of
+#' the first component.
+#'
+#' @export
+#'
+#' @rdname Eigenprcomp
+eigenprcomp <- function(x, center = TRUE, scale = FALSE, rank = NULL, tol = NULL, info = 1) {
+  # Check if x is a data frame and convert to matrix if necessary
+  if (is.data.frame(x)) {
+    x <- as.matrix(x)
+  }
+
+  # Save original row and column names
+  orig_row_names <- rownames(x)
+  orig_col_names <- colnames(x)
+
+  # Call the Rcpp function
+  result <- cpp_prcomp(x, center, scale,
+                       rank, tol, info)
+  # Add back original row and column names
+  if (!is.null(orig_row_names)) {
+    row.names(result$x) <- orig_row_names
+  }
+  if (!is.null(orig_col_names)) {
+    row.names(result$rotation) <- orig_col_names
+    names(result$center) <- orig_col_names
+    names(result$scale) <- orig_col_names
+  }
+
+  # Name the PC components as PACA1, PACA2, ...
+  colnames(result$x) <- paste0("PAC", seq_len(ncol(result$x)))
+  colnames(result$rotation) <- paste0("PAC", seq_len(ncol(result$rotation)))
+
+  return(result)
+}
+
+###########################################################################################################
+
+###########################################################################################################
+
 #' @title Transform Input for CCA
 #'
 #' @description

@@ -1,5 +1,10 @@
 // includes to make Eigen use BLAS
+// includes to make Eigen use BLAS+LAPACK
+#include <complex>
+
+#define EIGEN_SUPERLU_SUPPORT
 #define EIGEN_USE_BLAS
+// #define EIGEN_USE_LAPACKE
 
 #include <Rcpp.h>
 #include <RcppEigen.h>
@@ -8,6 +13,7 @@
 #include <random>
 #include <algorithm>
 #include <mutex>
+#include <Eigen/Dense>
 
 // [[Rcpp::plugins(cpp14)]]
 // [[Rcpp::depends(RcppEigen)]]
@@ -144,13 +150,26 @@ Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace = true) {
   return x;
 };
 
-Eigen::MatrixXd centerCPP(Eigen::MatrixXd& x) {
-  Eigen::VectorXd xcmeans = x.colwise().mean();
-  Eigen::MatrixXd xhold(x.rows(), x.cols());
-  for(int i = 0; i < x.rows(); i++) {
-    xhold.row(i) = xcmeans.transpose();
-  }
-  return x - xhold;
+// Eigen::MatrixXd centerCPP(Eigen::MatrixXd& x) {
+//   Eigen::VectorXd mean = x.colwise().mean();
+//   return x.rowwise() - mean.transpose();
+// }
+
+Eigen::MatrixXd centerCPP(const Eigen::MatrixXd& x) {
+  Eigen::VectorXd mean = x.colwise().mean();
+  return x.rowwise() - mean.transpose();
+}
+
+Eigen::MatrixXd covCPP(const Eigen::MatrixXd& x) {
+  Eigen::MatrixXd centered = centerCPP(x);
+  return (centered.adjoint() * centered) / double(x.rows() - 1);
+};
+
+Eigen::MatrixXd covSymCPP(const Eigen::MatrixXd& x) {
+  Eigen::MatrixXd centered = centerCPP(x);
+  Eigen::MatrixXd cv_tmp = (centered.adjoint() * centered) / double(x.rows() - 1);
+  Logger::LogDEBUG("SymCov");
+  return (cv_tmp + cv_tmp.transpose()) / 2.0;
 };
 
 Eigen::VectorXd colwiseVars(const Eigen::MatrixXd& matrix) {
@@ -180,48 +199,107 @@ Eigen::MatrixXd getUV(Eigen::MatrixXd& x, Eigen::MatrixXd& eigspc) {
   return x_centered * eigspc;
 };
 
-void solveNormalEQ(Eigen::MatrixXd& G, Eigen::LLT<Eigen::MatrixXd, Eigen::Upper>& LLtX, Eigen::LLT<Eigen::MatrixXd, Eigen::Upper>& LLtY,
+// void solveNormalEQ(Eigen::MatrixXd& G, Eigen::LLT<Eigen::MatrixXd, Eigen::Upper>& LLtX, Eigen::LLT<Eigen::MatrixXd, Eigen::Upper>& LLtY,
+//                    Eigen::MatrixXd& retA, Eigen::MatrixXd& retB, Eigen::VectorXd& retRho, bool flip = false){
+//   if(flip){
+//     G = G.transpose();
+//   }
+//
+//   Eigen::BDCSVD<Eigen::MatrixXd> svd_solver(G, Eigen::ComputeThinU | Eigen::ComputeThinV);
+//   if (!(svd_solver.matrixU().cols() > 0)){
+//     Logger::LogWARN("SVD status : FAILED");
+//   }
+//   Logger::LogDEBUG("SVD status : ", ((svd_solver.matrixU().cols() > 0) ? "ok" : "FAILED"));
+//
+//   if(!flip){
+//     retA = LLtX.matrixU().solve(svd_solver.matrixU());
+//     retB = LLtY.matrixU().solve(svd_solver.matrixV());
+//     retRho = svd_solver.singularValues();
+//   } else{
+//     retA = LLtX.matrixU().solve(svd_solver.matrixV());
+//     retB = LLtY.matrixU().solve(svd_solver.matrixU());
+//     retRho = svd_solver.singularValues();
+//   }
+// };
+
+void solveNormalEQ(const Eigen::MatrixXd& G, Eigen::LLT<Eigen::MatrixXd, Eigen::Upper>& LLtX, Eigen::LLT<Eigen::MatrixXd, Eigen::Upper>& LLtY,
                    Eigen::MatrixXd& retA, Eigen::MatrixXd& retB, Eigen::VectorXd& retRho, bool flip = false){
-  if(flip){
-    G = G.transpose();
-  }
 
+  // 1. Use BDCSVD for better accuracy and efficiency
   Eigen::BDCSVD<Eigen::MatrixXd> svd_solver(G, Eigen::ComputeThinU | Eigen::ComputeThinV);
-  if (!(svd_solver.matrixU().cols() > 0)){
-    Logger::LogWARN("SVD status : FAILED");
-  }
-  Logger::LogDEBUG("SVD status : ", ((svd_solver.matrixU().cols() > 0) ? "ok" : "FAILED"));
 
-  if(!flip){
-    retA = LLtX.matrixU().solve(svd_solver.matrixU());
-    retB = LLtY.matrixU().solve(svd_solver.matrixV());
-    retRho = svd_solver.singularValues();
+  // 2. Check SVD convergence
+  if (!(svd_solver.matrixU().cols() > 0)) {
+    Logger::LogWARN("SVD staus: FAILED");
+    return;
   } else{
-    retA = LLtX.matrixU().solve(svd_solver.matrixV());
-    retB = LLtY.matrixU().solve(svd_solver.matrixU());
-    retRho = svd_solver.singularValues();
+    Logger::LogDEBUG("SVD status : ", ((svd_solver.matrixU().cols() > 0) ? "ok" : "FAILED"));
   }
-};
+
+  // 3. Compute canonical correlations and vectors
+  Eigen::MatrixXd U = svd_solver.matrixU();
+  Eigen::MatrixXd V = svd_solver.matrixV();
+
+  if (flip) {
+    std::swap(U, V);
+  }
+
+  // 4. Solve for canonical vectors
+  retA = LLtX.matrixU().solve(U);
+  retB = LLtY.matrixU().solve(V);
+
+  // // 4. Solve for canonical vectors using QR decomposition for better numerical stability
+  // Eigen::HouseholderQR<Eigen::MatrixXd> qr_X(LLtX.matrixU());
+  // Eigen::HouseholderQR<Eigen::MatrixXd> qr_Y(LLtY.matrixU());
+  // retA = qr_X.solve(U);
+  // retB = qr_Y.solve(V);
+
+  // 5. Set canonical correlations
+  retRho = svd_solver.singularValues();
+
+  // // Log top 10 eigenvalues (or fewer if there aren't 10 available)
+  // int num_top_eigenvalues = std::min(10, static_cast<int>(retRho.size()));
+  // for (int i = 0; i < num_top_eigenvalues; ++i) {
+  //   Logger::LogDEBUG("SVD eig : ", i, "- ", retRho(i));
+  // }
+
+}
 
 Eigen::MatrixXd UV1_calc(Eigen::MatrixXd& UV, int k, int dUV1){
   Eigen::MatrixXd UV_k = UV.leftCols(k);  // Select first k columns of U
-  Eigen::VectorXd col_sums = UV_k.array().square().colwise().sum().sqrt();  // Calculate sqrt of sum of squares of each column
+  // Calculate the column sums of squares
+  Eigen::VectorXd col_sums = UV_k.colwise().squaredNorm();
 
-  Eigen::MatrixXd ones = Eigen::MatrixXd::Ones(dUV1, 1);  // Create a dU1 x 1 matrix of ones
-  Eigen::MatrixXd kronecker_product = ones * col_sums.transpose();  // This does the same thing as the kronecker product in this specific case
+  // Calculate the square root of the column sums
+  Eigen::VectorXd sqrt_col_sums = col_sums.array().sqrt();
 
-  Eigen::MatrixXd result = UV_k.array() / kronecker_product.array();  // Divide U_k by kronecker_product
+  // Replicate sqrt_col_sums across the rows
+  Eigen::MatrixXd divisor = sqrt_col_sums.transpose().replicate(dUV1, 1);
+
+  // Perform the element-wise division
+  Eigen::MatrixXd result = UV_k.array() / divisor.array();
 
   return result;
 };
 
-Eigen::MatrixXd correctedMat_calc(Eigen::MatrixXd& UV, Eigen::MatrixXd& XY,  bool flip = false){
-  Eigen::RowVectorXd col_means = XY.colwise().mean();  // Calculate column means
+Eigen::MatrixXd correctedMat_calc(Eigen::MatrixXd& UV, const Eigen::MatrixXd& XY,  bool flip = false){
 
-  Eigen::MatrixXd centered = XY.rowwise() - col_means;  // Subtract mean from each row
+  Eigen::VectorXd col_means = XY.colwise().mean();  // Calculate column means
 
-  Eigen::MatrixXd XY_til = centered - UV * (UV.transpose() * centered);
-  XY_til.rowwise() += col_means;  // Add back the means
+  // Replicate the column means across the rows to form means_matrix
+  Eigen::MatrixXd means_matrix = col_means.transpose().replicate(XY.rows(), 1);
+
+  // Center X by subtracting the means_matrix
+  Eigen::MatrixXd XY_centered = XY - means_matrix;
+
+  // Perform the projection onto U_1
+  Eigen::MatrixXd projection = UV * (UV.transpose() * XY_centered);
+
+  // Subtract the projection from X_centered
+  Eigen::MatrixXd XY_til = XY_centered - projection;
+
+  // Add means_matrix back to get X_tilde
+  XY_til += means_matrix;
 
   if (flip){
     return XY_til.transpose();
@@ -282,32 +360,35 @@ void doCCA_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize,
   // calculate the covariance matrix ; 0: unbiased estimator (1/(n-1)), 1: 2nd moment estimator (1/n)
   // Assuming normalized
   Logger::LogINFO("Estimating Covariances ...");
+
   Eigen::MatrixXd Cxx;
   {
     Timer timer("X Covariance");
-    Cxx = (X.adjoint() * X) / double(n - 1.0);
-    // Cxx = (Cxx + Cxx.adjoint()) / 2.0;
+    Cxx = covCPP(X);
   }
   Logger::LogLOG("Done with X Covariance");
 
   Eigen::MatrixXd Cyy;
   {
     Timer timer("Y Covariance");
-    Cyy = (Y.adjoint() * Y) / double(n - 1.0);
-    // Cyy = (Cyy + Cyy.transpose()) / 2.0;
+    Cyy = covCPP(Y);
   }
   Logger::LogLOG("Done with Y Covariance");
+
   int cxr = Cxx.rows();
   int cyr = Cyy.rows();
   Logger::LogLOG("(symmetric) Cxx / Cyy Shape  : ", cxr , " / ", cyr);
+
   Eigen::MatrixXd Cxy;
   {
     Timer timer("Cross Covariance");
-    Cxy = (X.adjoint() * Y) / double(n - 1.0);
+    // Cxy = (X.adjoint() * Y) / double(n - 1.0);
+    Cxy = (centerCPP(X).adjoint() * centerCPP(Y)) / double(n - 1);
   }
   Logger::LogLOG("Done with XY Cross-Covariance");
 
   Logger::LogINFO("Solving CCA Objective ...");
+
   Logger::LogLOG("Performing Cholesky Decomposition ...");
 
   Eigen::LLT<Eigen::MatrixXd, Eigen::Upper> lltOfCX;
@@ -331,12 +412,30 @@ void doCCA_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize,
 
   }
   Logger::LogLOG("Done with Cholesky decomp");
-  // clear memory
+
+  // // clear memory
   Cxx.resize(0, 0);
   Cyy.resize(0, 0);
 
   Logger::LogLOG("Performing Gamma Calculation ...");
   Eigen::MatrixXd Gamma;
+  {
+    // The resulting matrix should equivalent to Cxx_fi.transpose() * Cxy * Cyy_fi
+    Timer timer("Gamma Calculation");
+
+    // Solve Cxx * Xxxxy = Cxy for Xxxxy
+    Eigen::MatrixXd Xxxxy = lltOfCX.matrixU().transpose().solve(Cxy);
+
+    // Solve Cyy * Gamma = t(Xxxxy) for Gamma; t(Gamma) = Cxx^-1*Cxy*Cyy^-1*Cyx
+    Gamma = lltOfCY.matrixU().transpose().solve(Xxxxy.transpose()).transpose();
+
+    Logger::LogDEBUG("Gamma:" , Gamma.rows(), "x", Gamma.cols());
+  }
+  Logger::LogLOG("Done with Gamma Calculation");
+
+
+  Logger::LogLOG("Performing Gamma Calculation ...");
+
   {
     Timer timer("Gamma Calculation");
     // The resulting matrix should equivalent to Cxx_fi.transpose() * Cxy * Cyy_fi
@@ -344,7 +443,6 @@ void doCCA_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize,
     Gamma = lltOfCY.matrixU().transpose().solve(Gamma_temp.transpose()).transpose();
     Logger::LogDEBUG("Gamma:" , Gamma.rows(), "x", Gamma.cols());
   }
-  // Test1 = Gamma;
   Logger::LogLOG("Done with Gamma Calculation");
 
   Logger::LogINFO("Performing SVD ...");
@@ -366,7 +464,7 @@ void doCCA_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize,
             U, V, eigs);
 };
 
-void selectK_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int& selK, bool normalize,
+void selectK_pvt(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int& selK, bool normalize,
                  Eigen::VectorXd& eigs, Eigen::MatrixXd& A, Eigen::MatrixXd& B,
                  Eigen::MatrixXd& U, Eigen::MatrixXd& V, double thrsh){
   // Initialize parameters
@@ -375,15 +473,15 @@ void selectK_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int& selK, bool normali
   int q = Y.cols();
   int d = std::min(p, q);
   int min_k = 1;
-  int max_k = p;
+  int max_k = d;
   int Ulim = max_k;
   int n_perm = std::floor(std::log2(d)/0.01);
   int counter = 0;
   int curr_k = 0;
 
   // Initialize variables
-  Eigen::MatrixXd& X_in = X;
-  Eigen::MatrixXd& Y_in = Y;
+  Eigen::MatrixXd X_in = X;
+  Eigen::MatrixXd Y_in = Y;
 
   if (normalize) {
     Logger::LogLOG("Normalizing ...");
@@ -408,8 +506,18 @@ void selectK_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int& selK, bool normali
   Eigen::VectorXd projected_x , projected_y, var_Xperm, var_Yperm;
   Eigen::MatrixXd Zperm, projected_Xperm, projected_Yperm;
   double var_x, var_y;
-  std::random_device rd;
-  std::mt19937 g(rd());
+
+  // Synchronize R's RNG state
+  GetRNGstate();
+
+  // Use the seed from R
+  // Generate a seed using R's RNG
+  unsigned int seed = static_cast<unsigned int>(unif_rand() * UINT_MAX);
+  Logger::LogDEBUG("setting seed :", seed);
+  std::mt19937 g(seed);
+  // std::random_device rd;
+  // std::mt19937 g(rd());
+
   while (min_k < max_k){
     curr_k = std::floor((min_k + max_k)/2.0);
     counter += 1;
@@ -487,6 +595,10 @@ void selectK_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int& selK, bool normali
   if (curr_k >= Ulim - 1){
     curr_k = Ulim - 3;
   }
+
+  // Synchronize the RNG state back to R
+  PutRNGstate();
+
   selK = curr_k+1;
   Logger::LogLOG("Selected K:", selK);
   Logger::LogINFO("Done with K Selection");
@@ -503,17 +615,83 @@ std::mutex Logger::mtx;
 
 //' @export
 //' @noRd
+// [[Rcpp::export(cpp_prcomp)]]
+Rcpp::List cpp_prcomp(const Eigen::MatrixXd& X, bool center = true,
+                      bool scale = false, Rcpp::Nullable<int> rank = R_NilValue,
+                       Rcpp::Nullable<double> tol = R_NilValue,
+                       int verbosity = 1) {
+  Logger::SetVerbosity(verbosity);
+  Timer timer("RcppEigen PCA");
+
+  int n = X.rows();
+  int p = X.cols();
+  Logger::LogLOG("Performing PCA with Eigen in C++ ...");
+  // Create a copy of X to avoid mutating the input
+  Eigen::MatrixXd X_copy = X;
+
+  // Center the data
+  Eigen::VectorXd center_vec = Eigen::VectorXd::Zero(p);
+  if (center) {
+    center_vec = X_copy.colwise().mean();
+    X_copy.rowwise() -= center_vec.transpose();
+  }
+
+  // Scale the data
+  Eigen::VectorXd scale_vec = Eigen::VectorXd::Ones(p);
+  if (scale) {
+    scale_vec = (X_copy.array().square().colwise().sum() / (n - 1)).sqrt();
+    for (int i = 0; i < p; ++i) {
+      if (scale_vec(i) != 0) {
+        X_copy.col(i) /= scale_vec(i);
+      }
+    }
+  }
+
+  // Determine rank
+  int rank_to_use = std::min(n, p);
+  if (rank.isNotNull()) {
+    rank_to_use = std::min(rank_to_use, Rcpp::as<int>(rank));
+  }
+
+  // Perform SVD
+  Eigen::BDCSVD<Eigen::MatrixXd> svd(X_copy, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+  // Apply tolerance if specified
+  if (tol.isNotNull()) {
+    double tol_value = Rcpp::as<double>(tol);
+    rank_to_use = std::min(rank_to_use,
+                           (int)(svd.singularValues().array() > (tol_value * svd.singularValues()(0))).count());
+  }
+
+  // Calculate standard deviations
+  Eigen::VectorXd sdev = svd.singularValues().head(rank_to_use) / std::sqrt(n - 1);
+  Logger::LogLOG("PCA: DONE");
+  return Rcpp::List::create(
+    Rcpp::Named("sdev") = sdev,
+    Rcpp::Named("rotation") = svd.matrixV().leftCols(rank_to_use),
+    Rcpp::Named("x") = (X_copy * svd.matrixV().leftCols(rank_to_use)).eval(),
+    Rcpp::Named("center") = center_vec,
+    Rcpp::Named("scale") = scale_vec
+  );
+}
+
+//' @export
+//' @noRd
 // [[Rcpp::export(cpp_CCA)]]
-Rcpp::List cpp_CCA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, int verbosity = 1) {
- Logger::SetVerbosity(verbosity);
+Rcpp::List cpp_CCA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo,
+                   bool normalize = true, int verbosity = 1) {
+  Logger::SetVerbosity(verbosity);
+  // Create local copies of X and Y to avoid modifying the original matrices
+  Eigen::MatrixXd X = Xo;
+  Eigen::MatrixXd Y = Yo;
 
- Eigen::MatrixXd A, B, U, V;
- Eigen::VectorXd eigs;
- doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
+  Eigen::MatrixXd A, B, U, V;
+  Eigen::VectorXd eigs;
+  doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
 
- Logger::LogINFO("CCA: DONE");
+  Logger::LogINFO("CCA: DONE");
 
- return Rcpp::List::create(Rcpp::Named("corr")=eigs,
+  return Rcpp::List::create(Rcpp::Named("corr")=eigs,
                            Rcpp::Named("A")=A,
                            Rcpp::Named("B")=B,
                            Rcpp::Named("U")=U,
@@ -524,20 +702,23 @@ Rcpp::List cpp_CCA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true
 //' @export
 //' @noRd
 // [[Rcpp::export(cpp_selectK)]]
-Rcpp::List cpp_selectK(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, double threshold  = 10.0, int verbosity = 1){
+Rcpp::List cpp_selectK(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
+                       bool normalize = true, double threshold  = 10.0,
+                       int verbosity = 1){
  Logger::SetVerbosity(verbosity);
 
  Logger::LogINFO("selectK: Starting ...");
  Eigen::MatrixXd A, B, U, V;
  Eigen::VectorXd eigs;
- int selK, dU1;
+ int selK;
  selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
- dU1 = U.rows();
+
+ int dU1 = U.rows();
  Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
 
  Logger::LogINFO("selectK: DONE");
 
- return Rcpp::List::create(Rcpp::Named("K")=selK,
+ return Rcpp::List::create(Rcpp::Named("k")=selK,
                            Rcpp::Named("U0")=U0);
 };
 
@@ -545,24 +726,40 @@ Rcpp::List cpp_selectK(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = 
 //' @export
 //' @noRd
 // [[Rcpp::export(cpp_PACA)]]
-Rcpp::List cpp_PACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int k, bool normalize = true, bool retCCA = false, int verbosity = 1){
- Logger::SetVerbosity(verbosity);
+Rcpp::List cpp_PACA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo, int k,
+                    bool normalize = true, bool retCCA = false,
+                    int verbosity = 1){
+  Logger::SetVerbosity(verbosity);
 
- Logger::LogINFO("PACA: Starting ...");
- // perform CCA
- Eigen::MatrixXd A, B, U, V;
- Eigen::VectorXd eigs;
- doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
- Logger::LogLOG("Done with CCA");
+  // Create local copies of X and Y to avoid modifying the original matrices
+  Eigen::MatrixXd X = Xo;
+  Eigen::MatrixXd Y = Yo;
 
- Logger::LogINFO("Residualizing Shared Signal ...");
- int dU1 = U.rows();
- Eigen::MatrixXd U0 = UV1_calc(U, k, dU1);
- Eigen::MatrixXd Xtil = correctedMat_calc(U0, X, false);
+  Logger::LogINFO("PACA: Starting ...");
+  // perform CCA
+  Eigen::MatrixXd A, B, U, V;
+  Eigen::VectorXd eigs;
 
- Logger::LogINFO("PACA: DONE");
+  //// DEBUG
+  // Eigen::MatrixXd Cxx, Cyy, Cxy, Gamma;
+  // doCCA_pvt(X, Y, normalize, eigs, A, B, U, V, Cxx, Cyy, Cxy, Gamma);
+  ////
 
- if (retCCA){
+  doCCA_pvt(X, Y, normalize, eigs, A, B, U, V);
+
+  Logger::LogLOG("Done with CCA");
+
+  Logger::LogINFO("Residualizing Shared Signal ...");
+  // Calculate shared components
+  int dU1 = U.rows();
+  Eigen::MatrixXd U0 = UV1_calc(U, k, dU1);
+
+  // Calcute X matrix with case specific variation only
+  Eigen::MatrixXd Xtil = correctedMat_calc(U0, Xo, false);
+
+  Logger::LogINFO("PACA: DONE");
+
+  if (retCCA){
    return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
                              Rcpp::Named("U0")=U0,
                              Rcpp::Named("corr")=eigs,
@@ -570,8 +767,12 @@ Rcpp::List cpp_PACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int k, bool normaliz
                              Rcpp::Named("B")=B,
                              Rcpp::Named("U")=U,
                              Rcpp::Named("V")=V);
- }
- return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
+    // Rcpp::Named("Gamma")=Gamma,
+    // Rcpp::Named("Cxx")=Cxx,
+    // Rcpp::Named("Cyy")=Cyy,
+    // Rcpp::Named("Cxy")=Cxy)
+  }
+  return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
                            Rcpp::Named("U0")=U0);
 };
 
@@ -579,38 +780,45 @@ Rcpp::List cpp_PACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, int k, bool normaliz
 //' @export
 //' @noRd
 // [[Rcpp::export(cpp_autoPACA)]]
-Rcpp::List cpp_autoPACA(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize = true, bool retCCA = false, double threshold = 10.0, int verbosity = 1){
- Logger::SetVerbosity(verbosity);
+Rcpp::List cpp_autoPACA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo,
+                        bool normalize = true, bool retCCA = false,
+                        double threshold = 10.0, int verbosity = 1){
+  Logger::SetVerbosity(verbosity);
 
- Logger::LogINFO("autoPACA: Starting ...");
- // perform CCA + select K
- Eigen::MatrixXd A, B, U, V;
- Eigen::VectorXd eigs;
- int selK, dU1;
- selectK_pvt(X, Y, selK, normalize, eigs, A, B, U, V, threshold);
- Logger::LogLOG("K_est : ", selK);
+  Logger::LogINFO("autoPACA: Starting ...");
+  // perform CCA + select K
+  Eigen::MatrixXd A, B, U, V;
+  Eigen::VectorXd eigs;
 
-
- Logger::LogINFO("Residualizing Shared Signal ...");
- dU1 = U.rows();
- Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
- Eigen::MatrixXd Xtil = correctedMat_calc(U0, X, false);
+  // Estimate number of shared components
+  int selK;
+  selectK_pvt(Xo, Yo, selK, normalize, eigs, A, B, U, V, threshold);
+  Logger::LogLOG("K_est : ", selK);
 
 
- Logger::LogINFO("autoPACA: DONE");
+  Logger::LogINFO("Residualizing Shared Signal ...");
+  // Calculate shared components
+  int dU1 = U.rows();
+  Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
 
- if (retCCA){
+  // Calcute X matrix with case specific variation only
+  Eigen::MatrixXd Xtil = correctedMat_calc(U0, Xo, false);
+
+
+  Logger::LogINFO("autoPACA: DONE");
+
+  if (retCCA){
    return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
                              Rcpp::Named("U0")=U0,
-                             // Rcpp::Named("K")=selK,
+                             Rcpp::Named("k")=selK,
                              Rcpp::Named("corr")=eigs,
                              Rcpp::Named("A")=A,
                              Rcpp::Named("B")=B,
                              Rcpp::Named("U")=U,
                              Rcpp::Named("V")=V);
- }
- return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
-                           // Rcpp::Named("K")=selK,
+  }
+  return Rcpp::List::create(Rcpp::Named("Xtil")=Xtil,
+                           Rcpp::Named("k")=selK,
                            Rcpp::Named("U0")=U0);
 
 };

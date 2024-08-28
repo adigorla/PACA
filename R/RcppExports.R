@@ -7,8 +7,14 @@ normalizeCPP <- function(x, inplace = TRUE) {
 
 #' @export
 #' @noRd
-cpp_CCA <- function(X, Y, normalize = TRUE, verbosity = 1L) {
-    .Call(`_PACA_cpp_CCA`, X, Y, normalize, verbosity)
+cpp_prcomp <- function(X, center = TRUE, scale = FALSE, rank = NULL, tol = NULL, verbosity = 1L) {
+    .Call(`_PACA_cpp_prcomp`, X, center, scale, rank, tol, verbosity)
+}
+
+#' @export
+#' @noRd
+cpp_CCA <- function(Xo, Yo, normalize = TRUE, verbosity = 1L) {
+    .Call(`_PACA_cpp_CCA`, Xo, Yo, normalize, verbosity)
 }
 
 #' @export
@@ -19,13 +25,13 @@ cpp_selectK <- function(X, Y, normalize = TRUE, threshold = 10.0, verbosity = 1L
 
 #' @export
 #' @noRd
-cpp_PACA <- function(X, Y, k, normalize = TRUE, retCCA = FALSE, verbosity = 1L) {
-    .Call(`_PACA_cpp_PACA`, X, Y, k, normalize, retCCA, verbosity)
+cpp_PACA <- function(Xo, Yo, k, normalize = TRUE, retCCA = FALSE, verbosity = 1L) {
+    .Call(`_PACA_cpp_PACA`, Xo, Yo, k, normalize, retCCA, verbosity)
 }
 
 #' @export
 #' @noRd
-cpp_autoPACA <- function(X, Y, normalize = TRUE, retCCA = FALSE, threshold = 10.0, verbosity = 1L) {
-    .Call(`_PACA_cpp_autoPACA`, X, Y, normalize, retCCA, threshold, verbosity)
+cpp_autoPACA <- function(Xo, Yo, normalize = TRUE, retCCA = FALSE, threshold = 10.0, verbosity = 1L) {
+    .Call(`_PACA_cpp_autoPACA`, Xo, Yo, normalize, retCCA, threshold, verbosity)
 }
 
