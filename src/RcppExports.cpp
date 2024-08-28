@@ -11,34 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// normalizeCPP
-Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace);
-RcppExport SEXP _PACA_normalizeCPP(SEXP xSEXP, SEXP inplaceSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Eigen::MatrixXd& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< bool >::type inplace(inplaceSEXP);
-    rcpp_result_gen = Rcpp::wrap(normalizeCPP(x, inplace));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cpp_prcomp
-Rcpp::List cpp_prcomp(const Eigen::MatrixXd& X, bool center, bool scale, Rcpp::Nullable<int> rank, Rcpp::Nullable<double> tol, int verbosity);
-RcppExport SEXP _PACA_cpp_prcomp(SEXP XSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP rankSEXP, SEXP tolSEXP, SEXP verbositySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
-    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<int> >::type rank(rankSEXP);
-    Rcpp::traits::input_parameter< Rcpp::Nullable<double> >::type tol(tolSEXP);
-    Rcpp::traits::input_parameter< int >::type verbosity(verbositySEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_prcomp(X, center, scale, rank, tol, verbosity));
-    return rcpp_result_gen;
-END_RCPP
-}
 // cpp_CCA
 Rcpp::List cpp_CCA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo, bool normalize, int verbosity);
 RcppExport SEXP _PACA_cpp_CCA(SEXP XoSEXP, SEXP YoSEXP, SEXP normalizeSEXP, SEXP verbositySEXP) {
@@ -100,14 +72,42 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_prcomp
+Rcpp::List cpp_prcomp(const Eigen::MatrixXd& X, bool center, bool scale, Rcpp::Nullable<int> rank, Rcpp::Nullable<double> tol, int verbosity);
+RcppExport SEXP _PACA_cpp_prcomp(SEXP XSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP rankSEXP, SEXP tolSEXP, SEXP verbositySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< bool >::type center(centerSEXP);
+    Rcpp::traits::input_parameter< bool >::type scale(scaleSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<int> >::type rank(rankSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<double> >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< int >::type verbosity(verbositySEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_prcomp(X, center, scale, rank, tol, verbosity));
+    return rcpp_result_gen;
+END_RCPP
+}
+// normalizeCPP
+Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace);
+RcppExport SEXP _PACA_normalizeCPP(SEXP xSEXP, SEXP inplaceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< bool >::type inplace(inplaceSEXP);
+    rcpp_result_gen = Rcpp::wrap(normalizeCPP(x, inplace));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_PACA_normalizeCPP", (DL_FUNC) &_PACA_normalizeCPP, 2},
-    {"_PACA_cpp_prcomp", (DL_FUNC) &_PACA_cpp_prcomp, 6},
     {"_PACA_cpp_CCA", (DL_FUNC) &_PACA_cpp_CCA, 4},
     {"_PACA_cpp_selectK", (DL_FUNC) &_PACA_cpp_selectK, 5},
     {"_PACA_cpp_PACA", (DL_FUNC) &_PACA_cpp_PACA, 6},
     {"_PACA_cpp_autoPACA", (DL_FUNC) &_PACA_cpp_autoPACA, 6},
+    {"_PACA_cpp_prcomp", (DL_FUNC) &_PACA_cpp_prcomp, 6},
+    {"_PACA_normalizeCPP", (DL_FUNC) &_PACA_normalizeCPP, 2},
     {NULL, NULL, 0}
 };
 

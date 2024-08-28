@@ -5,10 +5,12 @@
 src/*.o
 src/*.so
 src/*.dll
+**/legacysrc
 
 # Ignore OS generated files
 **/.DS_Store
 **/.Rhistory
+**/.vscode
 
 # ignore intermediate test files
 tests/**/build-*.R

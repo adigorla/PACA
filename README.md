@@ -47,7 +47,7 @@ X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
 ```
 >[!IMPORTANT]
->All PACA functions require the input matrics to be in from features-by-samples (MxN). So if input data is NxM, transpose both matrices to MxN
+>All PACA functions require the input matrics to be of shape **features-by-samples (MxN)**. So if input data is NxM, transpose both matrices to MxN
 > ```r
 > X <- t(X)
 > Y <- t(Y)
@@ -91,7 +91,7 @@ Please refer to the [PACA man page](man/PACA.Rd) for more detailed usage informa
 
 ### rPACA
 
-`paca_r` is a randomized version of the basic `paca` algorithm. `paca_r` allows us to apply **PACA** in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
+`rpaca` is a randomized version of the basic `paca` algorithm. `paca_r` allows us to apply **PACA** in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
 
 ``` r
 # load package

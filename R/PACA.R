@@ -93,13 +93,12 @@ paca <- function(X, Y,
                  thrsh = 10.0,
                  ccweights = FALSE,
                  info = 1){
-  # input shape check
-  if(dim(X)[1] != dim(Y)[1]){
-    stop(sprintf("RowSize X (", dim(X)[1], ") is NOT equal to RowSize Y (",
-                 dim(Y)[1], ")\nInput matrices should have shape:
-                 features-by-samples (MxN) where M size should match"
-                 )
-         )
+  # Input shape check
+  if (dim(X)[1] != dim(Y)[1]) {
+    stop(sprintf(
+      "RowSize X (%d) is NOT equal to RowSize Y (%d).\nInput matrices should have shape: features-by-samples (MxN) where M size should match.",
+      dim(X)[1], dim(Y)[1]
+    ))
   }
 
   names_list <- getNames(X, Y)
