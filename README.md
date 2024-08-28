@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 ![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
-![release: v0.2.0](https://img.shields.io/badge/release-v0.2.5-yellow)
+![release: v0.4.0](https://img.shields.io/badge/release-v0.2.5-green)
 ![coverage: 100%](https://img.shields.io/badge/coverage-80%25-brightgreen)
 ![docs: in-progress](https://img.shields.io/badge/docs-in--progress-yellow)
 <!-- badges: end -->
@@ -56,8 +56,12 @@ The input data, `X` & `Y` needs to be of the form features-by-samples (MxN), whe
 NOTE: for all examples we assume the the number of samples, N, is the same for cases and controls for simplicity. In reality, the number of cases and controls can be different. `paca` only requires the number of features, M, to be the same and alinged in the case/control data.
 
 ``` r
+# standardize 
+X.std <- scale(X, center = T, scale = T)
+Y.std <- scale(Y, center = T, scale = T)
+
 # run PACA (and infer k)
-PACA.res <- paca(X, Y)
+PACA.res <- paca(X.std, Y.std)
 
 # return the top 5 (defult rank) unique components of the case data
 print(dim(PACA.res$x)) # Nx5
@@ -69,8 +73,12 @@ print(dim(PACA.res$xtil)) # MxN
 
 One also has the option to run the `paca` algorithm and set a user defined `k`. This would return the unique components in the cases at the user definde `k`. The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N.  
 ``` r
-# run PACA w/ fixed k
-resPACA <- paca(X, Y, k = 10)
+# standardize 
+X.std <- scale(X, center = T, scale = T)
+Y.std <- scale(Y, center = T, scale = T)
+
+# run PACA with fixed k
+PACA.res.k10 <- paca(X.std, Y.std, k = 10)
 
 # return the top 5 (defult rank) unique components of the cases, after correcting for the top 10 shared components
 print(dim(PACA.res$x)) # Nx5
@@ -96,8 +104,12 @@ Y <- read.table("control_data1.txt")
 The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M << N. The data also need to be standardized along the feature axis. Also note that the number of shared dimensions `k` to be removed needs to be user specified. This can be chosen by performing a grid search over a range of `k` and picking a value that maximizes some application specific metric or based on the user's domain specific knowledge.
 
 ``` r
-# run paca_r
-rPACA.res <- rpaca(X, Y, k = 10, niter = 20, batch = 600, rank = 4)
+# standardize 
+X.std <- scale(X, center = T, scale = T)
+Y.std <- scale(Y, center = T, scale = T)
+
+# run randomized PACA
+rPACA.res <- rpaca(X.std, Y.std, k = 10, niter = 20, batch = 600, rank = 4)
 
 # the dimension of the returned unique components of the cases
 print(dim(rPACA.res$x))
@@ -115,10 +127,17 @@ The `paca_null` algorithm allows users to test for the statistical significance 
 library(PACA)
 
 # load data
-X <- read.table("case_data1.txt")     # NxM -> MxN
-Y <- read.table("control_data1.txt")  # NxM -> MxN
+X <- t(read.table("case_data1.txt"))     # NxM -> MxN
+Y <- t(read.table("control_data1.txt"))  # NxM -> MxN
 
-PACA.nulltest <- paca_null(X, Y, k, nperm = 100)
+# standardize 
+X.std <- scale(X, center = T, scale = T)
+Y.std <- scale(Y, center = T, scale = T)
+
+# test for selected K
+k.h0 <- 10
+
+PACA.nulltest <- paca_null(X.std, Y.std, k.h0, nperm = 100)
 
 # p-value of rejecting H0 there is no case specific variation PACA PC1
 print(PACA.nulltest$pval)
