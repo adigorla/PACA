@@ -1,3 +1,18 @@
+# Ignore version control directories and LICENSE
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.git$
+^\.gitignore$
 ^LICENSE\.md$
+
+# Ignore common editor/IDE files
+^\.Rhistory$
+^\.RData$
+^\.Ruserdata$
+^\.vscode$
+
+# Ignore other development files
+^dev/
+^data-raw/
+^analysis/
+^inst/examples/

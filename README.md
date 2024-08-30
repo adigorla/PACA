@@ -2,17 +2,10 @@
 
 <!-- badges: start -->
 ![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
-![release: v0.4.0](https://img.shields.io/badge/release-v0.2.5-green)
+![release: v0.4.0](https://img.shields.io/badge/release-v0.4.0-green)
 ![coverage: 100%](https://img.shields.io/badge/coverage-80%25-brightgreen)
 ![docs: in-progress](https://img.shields.io/badge/docs-in--progress-yellow)
 <!-- badges: end -->
-
->[!WARNING]  
->___Documenation development in-progress___
->
->The code is still in beta and likly has bugs 
->
->Please report all bugs and feature requests by creating a new Issue ticket
 
 Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approach leveraging canonical correlation analysis to robustly capture weak sources of subphenotypic variation. PACA can be used to define *de novo* subtypes that are more likely to reflect molecular heterogeneity, especially in challenging cases where the phenotypic heterogeneity may be masked by a myriad of strong unrelated effects in the data.
 
@@ -22,7 +15,6 @@ Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approac
 
 * Rcpp
 * RcppEigen
-* rsvd
 * stats
 
 You can install **PACA** using *devtools*:
@@ -89,7 +81,7 @@ print(dim(PACA.res$xtil)) # MxN
 
 Please refer to the [PACA man page](man/PACA.Rd) for more detailed usage information.
 
-### rPACA
+### Randomized (r)PACA
 
 `rpaca` is a randomized version of the basic `paca` algorithm. `paca_r` allows us to apply **PACA** in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
 
@@ -145,6 +137,34 @@ print(PACA.nulltest$pval)
 The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M >> N. The data also need to be standardized along the feature axis. Increasing `nperm` increases the precision of the `pval` estimate.
 Please refer to the [PACA man page](man/PACA_null.Rd) for more detailed usage information.
 
+> 🚧 **Documentation Under Development** 🚧  
+>  
+> The code is currently in **public beta** and may contain **incomplete features**. We are actively working to improve the documentation and code stability.  
+>  
+>
+> 🐛 **Found a Bug?** Have a suggestion or found a bug? We’d love to hear from you! Please [create a new issue](<https://github.com/adigorla/PACA/issues>) on our GitHub repository to report any bugs or request new features.  
+>
+>  
+> 📣 **Feedback is Welcome!** Your feedback is invaluable in helping us improve!
+
+## Citation
+If you use this software in your research, please cite our work as follows:
+```
+@article{gorla2023paca,
+    author = {Gorla, Aditya and Sankararaman, Sriram and Burchard, Esteban and Flint, Jonathan and Zaitlen, Noah and Rahmani, Elior},
+    title = {Phenotypic subtyping via contrastive learning},
+    journal = {bioRxiv},
+    year = {2023},
+    doi = {10.1101/2023.01.05.522921},
+    URL = {https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1}
+}
+```
+Gorla, *et al*. "[Phenotypic subtyping via contrastive learning](https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1)" **biorxiv** (2023).
+
+## License and Disclaimer
+
+PACA is publicly released under the GPL-3.0 license (full license text found [here](LICENSE.md)). Note however that the programs it calls may be subject to different licenses. Users are responsible for checking that they are authorized to run all programs before running this script.
+
 ## Troubleshooting
 
 <details>
@@ -189,23 +209,4 @@ Make sure that the four "UPATDTE & CHECK path is valid" lines point to valid loc
 
 For all older versions of R and Intel Mac installation issues, please refer to the detailed instructions on the [The Coatless Professor](https://thecoatlessprofessor.com/programming/cpp/r-compiler-tools-for-rcpp-on-macos/) website.
 </details>
-
-## License and Disclaimer
-
-PACA is publicly released under the GPL-3.0 license (full license text found [here](LICENSE.md)). Note however that the programs it calls may be subject to different licenses. Users are responsible for checking that they are authorized to run all programs before running this script.
-
-## Citation
-If you use this software in your research, please cite our work as follows:
-```
-@article{gorla2023paca,
-    author = {Gorla, Aditya and Sankararaman, Sriram and Burchard, Esteban and Flint, Jonathan and Zaitlen, Noah and Rahmani, Elior},
-    title = {Phenotypic subtyping via contrastive learning},
-    journal = {bioRxiv},
-    year = {2023},
-    doi = {10.1101/2023.01.05.522921},
-    URL = {https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1}
-}
-```
-Gorla, *et al*. "[Phenotypic subtyping via contrastive learning](https://www.biorxiv.org/content/10.1101/2023.01.05.522921v1)" **biorxiv** (2023).
-
 

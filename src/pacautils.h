@@ -5,9 +5,9 @@
 
 Eigen::MatrixXd getUV(Eigen::MatrixXd& x, Eigen::MatrixXd& eigspc);
 
-Eigen::MatrixXd UV1_calc(Eigen::MatrixXd& UV, int k, int dUV1);
+Eigen::MatrixXd UV1_calc(const Eigen::MatrixXd& UV, int k, int dUV1);
 
-Eigen::MatrixXd correctedMat_calc(Eigen::MatrixXd& UV, const Eigen::MatrixXd& XY,  bool flip) ; 
+Eigen::MatrixXd correctedMat_calc(const Eigen::MatrixXd& UV, const Eigen::MatrixXd& XY,  bool flip) ; 
 
 Eigen::VectorXd topPC_loading(Eigen::MatrixXd& A);
 

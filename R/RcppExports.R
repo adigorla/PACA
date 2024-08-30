@@ -31,6 +31,12 @@ cpp_prcomp <- function(X, center, scale, rank, tol, verbosity) {
     .Call(`_PACA_cpp_prcomp`, X, center, scale, rank, tol, verbosity)
 }
 
+#' @export
+#' @noRd
+cpp_rPACA <- function(X, Y, k, niter, batch, rank, normalize, verbosity) {
+    .Call(`_PACA_cpp_rPACA`, X, Y, k, niter, batch, rank, normalize, verbosity)
+}
+
 normalizeCPP <- function(x, inplace) {
     .Call(`_PACA_normalizeCPP`, x, inplace)
 }

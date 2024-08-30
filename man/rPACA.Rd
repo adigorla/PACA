@@ -4,17 +4,17 @@
 \alias{rpaca}
 \title{Randomized Phenotype Aware Components Analysis (rPACA)}
 \usage{
-rpaca(X, Y, k, niter = 20, batch = 600, rank = 5)
+rpaca(X, Y, k, niter = 20, batch = 100, rank = 5, scale = FALSE, info = 1)
 }
 \arguments{
 \item{X}{\eqn{m} by \eqn{n_1} matrix; \cr
 Case (foreground) input data matrix. \cr
-It is recommended to normailize the feature scales as appropriate for the data modality.
+It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
 \item{Y}{\eqn{m} by \eqn{n_0} matrix; \cr
 Control (foreground) input data matrix. \cr
-It is recommended to normailize the feature scales as appropriate for the data modality.
+It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
 \item{k}{Positive integer, \eqn{k > 1}; \cr
@@ -27,17 +27,23 @@ Number random sampling iterations.}
 Number of cases/controls to be sampled for the training set at each iteration. \cr
 Note that \eqn{k < batch-1} and \eqn{batch < min{m, n1, n0}}.}
 
-\item{rank}{Positive integer, optional (default \eqn{2}); \cr
+\item{rank}{Positive integer, optional (default \eqn{5}); \cr
 Number of dominant principle components to be computed for the corrected case data.}
+
+\item{info}{Integer, optional (default: 1); \cr
+Verbosity level for the log generated. \cr
+0: Errors and warnings only \cr
+1: Basic informational messages \cr
+2: More detailed informational messages \cr
+3: Debug mode, all informational log is dumped}
 }
 \value{
-\code{autoPACA} returns a list containing the following components:
+\code{rpaca} returns a list containing the following components:
 \describe{
-   \item{x}{        \eqn{n_1} by \eqn{pcRank} matrix; \cr
+   \item{x}{        \eqn{n_1} by \eqn{rank} matrix; \cr
                     the projections / scores of the randomized \emph{PACA} corrected case data.
    }
-
-   \item{eigVal}{   list of size \eqn{pcRank}; \cr
+   \item{eigs}{   vector of size \eqn{rank}; \cr
                     the eigen values of the returned PC components.
    }
 }

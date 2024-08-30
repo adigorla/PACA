@@ -100,6 +100,12 @@ paca <- function(X, Y,
       dim(X)[1], dim(Y)[1]
     ))
   }
+  if(dim(X)[1] < min(dim(X)[2], dim(Y)[2])){
+    stop(sprintf(
+      "Feature size is smaller than min sample size %d.\nPACA expects more samples than features, try running rPACA instead."
+      , min(dim(X)[2], dim(Y)[2])
+    ))
+  }
 
   names_list <- getNames(X, Y)
 

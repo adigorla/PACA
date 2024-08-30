@@ -88,6 +88,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_rPACA
+Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int k, int niter, int batch, int rank, bool normalize, int verbosity);
+RcppExport SEXP _PACA_cpp_rPACA(SEXP XSEXP, SEXP YSEXP, SEXP kSEXP, SEXP niterSEXP, SEXP batchSEXP, SEXP rankSEXP, SEXP normalizeSEXP, SEXP verbositySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
+    Rcpp::traits::input_parameter< int >::type batch(batchSEXP);
+    Rcpp::traits::input_parameter< int >::type rank(rankSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalize(normalizeSEXP);
+    Rcpp::traits::input_parameter< int >::type verbosity(verbositySEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_rPACA(X, Y, k, niter, batch, rank, normalize, verbosity));
+    return rcpp_result_gen;
+END_RCPP
+}
 // normalizeCPP
 Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace);
 RcppExport SEXP _PACA_normalizeCPP(SEXP xSEXP, SEXP inplaceSEXP) {
@@ -107,6 +125,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_PACA_cpp_PACA", (DL_FUNC) &_PACA_cpp_PACA, 6},
     {"_PACA_cpp_autoPACA", (DL_FUNC) &_PACA_cpp_autoPACA, 6},
     {"_PACA_cpp_prcomp", (DL_FUNC) &_PACA_cpp_prcomp, 6},
+    {"_PACA_cpp_rPACA", (DL_FUNC) &_PACA_cpp_rPACA, 8},
     {"_PACA_normalizeCPP", (DL_FUNC) &_PACA_normalizeCPP, 2},
     {NULL, NULL, 0}
 };

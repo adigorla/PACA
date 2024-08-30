@@ -10,6 +10,11 @@ CXX_STD = CXX14
 PKG_CXXFLAGS = -O3 -march=native -mtune=native -DEIGEN_NO_DEBUG -flto=auto -I./
 PKG_CFLAGS = -O3 -march=native -mtune=native -flto=auto
 
+# added to suppress warnings from RcppEigen related to the Eigen library's internal implementation for NEON (ARM) architectures
+#		warning: 'void* memcpy(void*, const void*, size_t)' copying an object of non-trivial type 'Eigen::internal::Packet4c' {aka 'struct Eigen::internal::eigen_packet_wrapper<int, 2>'} from an array of 'const int8_t' {aka 'const signed char'} [-Wclass-memaccess]
+PKG_CXXFLAGS += -Wno-class-memaccess
+
+
 ## Turn this on if compilations fails becuase it cant find BLAS/OpenMP libs
 ## Note that this might result in slower performance
 ## PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(SHLIB_OPENMP_CXXFLAGS)

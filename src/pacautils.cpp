@@ -14,7 +14,8 @@ Eigen::MatrixXd getUV(Eigen::MatrixXd& x, Eigen::MatrixXd& eigspc) {
   return x_centered * eigspc;
 };
 
-Eigen::MatrixXd UV1_calc(Eigen::MatrixXd& UV, int k, int dUV1){
+Eigen::MatrixXd UV1_calc(const Eigen::MatrixXd& UV, int k, int dUV1){
+
   Eigen::MatrixXd UV_k = UV.leftCols(k);  // Select first k columns of U
   // Calculate the column sums of squares
   Eigen::VectorXd col_sums = UV_k.colwise().squaredNorm();
@@ -31,7 +32,11 @@ Eigen::MatrixXd UV1_calc(Eigen::MatrixXd& UV, int k, int dUV1){
   return result;
 };
 
-Eigen::MatrixXd correctedMat_calc(Eigen::MatrixXd& UV, const Eigen::MatrixXd& XY,  bool flip = false){
+Eigen::MatrixXd correctedMat_calc(const Eigen::MatrixXd& UV, const Eigen::MatrixXd& XY, bool flip = false){
+  
+  if (UV.rows() != XY.rows()) {
+        throw std::runtime_error("Mismatch in matrix dimensions in correctedMat_calc");
+    }
 
   Eigen::VectorXd col_means = XY.colwise().mean();  // Calculate column means
 
@@ -46,15 +51,17 @@ Eigen::MatrixXd correctedMat_calc(Eigen::MatrixXd& UV, const Eigen::MatrixXd& XY
 
   // Subtract the projection from X_centered
   Eigen::MatrixXd XY_til = XY_centered - projection;
+  Logger::LogDEBUG("correctedMat_calc: XY_til shape: ", XY_til.rows(), "x", XY_til.cols());
 
   // Add means_matrix back to get X_tilde
   XY_til += means_matrix;
 
-  if (flip){
-    return XY_til.transpose();
-  } else{
-    return XY_til;
+  // DEBUG- Remove
+  if (!XY_til.allFinite()) {
+    throw std::runtime_error("Non-finite values detected in XY_til");
   }
+
+  return flip ? XY_til.transpose() : XY_til;
 };
 
 Eigen::VectorXd topPC_loading(Eigen::MatrixXd& A){

@@ -9,17 +9,17 @@ void selectK_pvt(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int& selK, 
 
 
 Rcpp::List cpp_selectK(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
-                       bool normalize = true, double threshold  = 10.0,
+                       bool normalize = false, double threshold  = 10.0,
                        int verbosity = 1);
 
 
 Rcpp::List cpp_PACA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo, int k,
-                    bool normalize = true, bool retCCA = false,
+                    bool normalize = false, bool retCCA = false,
                     int verbosity = 1);
 
 
 Rcpp::List cpp_autoPACA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo,
-                        bool normalize = true, bool retCCA = false,
+                        bool normalize = false, bool retCCA = false,
                         double threshold = 10.0, int verbosity = 1);
 
 

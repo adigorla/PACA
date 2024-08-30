@@ -152,7 +152,7 @@ void doCCA_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize,
   // clear memory
   Cxy.resize(0, 0);
 
-  Logger::LogINFO("Performing SVD ...");
+  Logger::LogLOG("Performing SVD ...");
   {
     Timer timer("SVD");
     if (p >= q) {
