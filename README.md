@@ -100,8 +100,11 @@ The input data, `X` & `Y` needs to be of form samples-by-features (NxM), where M
 X.std <- scale(X, center = T, scale = T)
 Y.std <- scale(Y, center = T, scale = T)
 
+# run for selected K
+k.select <- 10
+
 # run randomized PACA
-rPACA.res <- rpaca(X.std, Y.std, k = 10, niter = 20, batch = 600, rank = 4)
+rPACA.res <- rpaca(X.std, Y.std, k.select, niter = 10, batch = 300, rank = 5)
 
 # the dimension of the returned unique components of the cases
 print(dim(rPACA.res$x))
