@@ -4,7 +4,7 @@
 \alias{rpaca}
 \title{Randomized Phenotype Aware Components Analysis (rPACA)}
 \usage{
-rpaca(X, Y, k, niter = 20, batch = 100, rank = 5, scale = FALSE, info = 1)
+rpaca(X, Y, k, niter = 10, batch = 100, rank = 5, scale = FALSE, info = 1)
 }
 \arguments{
 \item{X}{\eqn{m} by \eqn{n_1} matrix; \cr
