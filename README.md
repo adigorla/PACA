@@ -83,7 +83,7 @@ Please refer to the [PACA man page](man/PACA.Rd) for more detailed usage informa
 
 ### Randomized (r)PACA
 
-`rpaca` is a randomized version of the basic `paca` algorithm. `paca_r` allows us to apply **PACA** in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
+`rpaca` is a randomized version of the basic `paca` algorithm. `rpaca` allows us to apply **PACA** in regimes where M << N, i.e., in cases where the number of samples is greater than the number of features.
 
 ``` r
 # load package
@@ -110,7 +110,7 @@ rPACA.res <- rpaca(X.std, Y.std, k.select, niter = 10, batch = 300, rank = 5)
 print(dim(rPACA.res$x))
 
 ```
-`niter`, `rank` and `batch` are optional params. However, the users needs to make sure to set `batch` to `batch < min({M, N}` and `k < batch-1`. Increasing `niter` and/or `rank` empirically seems to increase the estimation accuracy of the randomized alogoritim, at the expense of increase runtime. 
+`niter`, `rank` and `batch` are optional params. However, the users needs to make sure to set `batch` to `batch < min({M, N}` and `k < batch-1`. Increasing `niter` and/or `rank` empirically seems to increase the estimation accuracy of the randomized algorithm; however, at the expense of increased runtime. 
 Please refer to the [rPACA man page](man/rPACA.Rd) for more detailed usage information.
 
 ### Null Testing
