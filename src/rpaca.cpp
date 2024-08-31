@@ -25,6 +25,43 @@ Eigen::VectorXi sampleWithoutReplacement(int n, int k, std::mt19937& gen) {
     return result;
 }
 
+Eigen::MatrixXd scaleCPP_batchmasked(const Eigen::MatrixXd& x, const Eigen::VectorXi& batch_idx) {
+    Eigen::MatrixXd scaled = Eigen::MatrixXd::Zero(x.rows(), x.cols());
+    
+    // Create a mask for rows not in the batch
+    Eigen::VectorXd mask = Eigen::VectorXd::Ones(x.rows());
+    for (int i = 0; i < batch_idx.size(); ++i) {
+        mask(batch_idx(i)) = 0;
+    }
+    // Count out-of-batch elements
+    double out_batch_count = mask.sum();
+    
+    for (int col = 0; col < x.cols(); ++col) {
+        // Extract the out-of-batch elements for this column
+        Eigen::VectorXd col_out_batch = x.col(col).array() * mask.array();
+        
+        // Compute mean of out-of-batch elements
+        double mean = col_out_batch.sum() / out_batch_count;
+        
+        // Compute variance of out-of-batch elements (corrected)
+        double variance = ((col_out_batch.array() - mean).square() * mask.array()).sum() / (out_batch_count - 1);
+        
+        // Compute standard deviation
+        double std_dev = std::sqrt(variance);
+        
+        // Scale the entire column
+        if (std_dev > 1e-9) {  // Avoid division by very small numbers
+            // Assuming the masked values are 0
+            scaled.col(col) = ((x.col(col).array() - mean) * mask.array()) / std_dev;
+            
+            // scaled.col(col) = ((x.col(col).array() - mean) * mask.array()) / std_dev + x.col(col).array() * (1 - mask.array());
+            // scaled.col(col) = (x.col(col).array() - mean) / std_dev;
+        }
+    }
+    
+    return scaled;
+}
+
 // TODO: write a more efficient getter/setter since we have alot of non-contiguous memory access
 
 ////////////////////////////////// Main Randomized PACA functions //////////////////////////////////
@@ -37,7 +74,7 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
                      bool normalize, int verbosity) {
     Logger::SetVerbosity(verbosity);
     Timer timer("rPACA");
-    Logger::LogINFO("Randomized PACA with K=", k, ", subsample size=", batch, ": Starting ...");
+    Logger::LogINFO("Randomized PACA (with K=", k, ", subsample size=", batch, ") : Starting ...");
 
     int m = X.rows();
     int p = X.cols();
@@ -61,25 +98,27 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
         {
             Timer timer("Iteration " + std::to_string(r + 1));
             // Sample batch indices for X and Y
-            Eigen::VectorXi inX = sampleWithoutReplacement(p, batch, gen);
-            Eigen::VectorXi inY = sampleWithoutReplacement(q, batch, gen);
+            Eigen::VectorXi Xin_idx = sampleWithoutReplacement(p, batch, gen);
+            Eigen::VectorXi Yin_idx = sampleWithoutReplacement(q, batch, gen);
 
             // Extract batches
-            Eigen::MatrixXd xBatch(m, batch);
-            Eigen::MatrixXd yBatch(m, batch);
-            for (int i = 0; i < batch; ++i) {
-                xBatch.col(i) = X.col(inX(i));
-                yBatch.col(i) = Y.col(inY(i));
-            }
+            // Eigen::MatrixXd X_in(m, batch);
+            // Eigen::MatrixXd Y_in(m, batch);
+            // for (int i = 0; i < batch; ++i) {
+            //     X_in.col(i) = X.col(Xin_idx(i));
+            //     Y_in.col(i) = Y.col(Yin_idx(i));
+            // }
+            Eigen::MatrixXd X_in = X(Eigen::all, Xin_idx);
+            Eigen::MatrixXd Y_in = Y(Eigen::all, Yin_idx);
 
             // Run PACA on the batch
-            Eigen::MatrixXd Xtil, U0;
+            Eigen::MatrixXd Xtil_in, U0;
             {
                 Logger::LogLOG("Subsample PACA: Starting ...");
                 Eigen::MatrixXd A, B, U, V;
                 Eigen::VectorXd eigs;
-                Eigen::MatrixXd xBatch_copy = xBatch;
-                doCCA_pvt(xBatch, yBatch, normalize, eigs, A, B, U, V);
+                Eigen::MatrixXd X_in_copy = X_in;
+                doCCA_pvt(X_in, Y_in, normalize, eigs, A, B, U, V);
                 Logger::LogLOG("Done with CCA");
 
                 Logger::LogLOG("Residualizing Shared Signal ...");
@@ -89,7 +128,7 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
                 U0 = UV1_calc(U, k, dU1);
 
                 // Calcute X matrix with case specific variation only
-                Xtil = correctedMat_calc(U0, xBatch, false);
+                Xtil_in = correctedMat_calc(U0, X_in, false);
 
                 // Clearing Temporary Matrices with Safer Operations
                 A.resize(0, 0);
@@ -97,65 +136,196 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
                 U.resize(0, 0);
                 V.resize(0, 0);
                 eigs.resize(0);
-                xBatch_copy.resize(0, 0);
+                X_in_copy.resize(0, 0);
             }
 
-            // Perform PCA on Xtil
-            Eigen::MatrixXd rotation, pacapcBatch_x;
+            // Perform PCA on Xtil_in
+            Eigen::MatrixXd rotation, Xpac_in;
             {
                 Timer timer("Subsample PCA");
-                Eigen::BDCSVD<Eigen::MatrixXd> svd(Xtil.transpose(), Eigen::ComputeThinU | Eigen::ComputeThinV);
+                Eigen::MatrixXd XtilT_norm = scaleCPP(std::move(Xtil_in.transpose().eval()));
+
+                // //// DEBUG
+                // std::cout << "Xtil_in shape: " << Xtil_in.rows() << "x" << Xtil_in.cols() << "\n";
+                // std::cout << "Xtil_Tnorm shape: " << XtilT_norm.rows() << "x" << XtilT_norm.cols() << "\n";
+                // // Calculate and print means
+                // Eigen::VectorXd meansxt = XtilT_norm.colwise().mean();
+                // std::cout << "Xtil_Tnorm means:\n" << meansxt.head(10).transpose() << "\n\n";
+                // // Calculate and print variances
+                // Eigen::VectorXd variancesxt = (XtilT_norm.rowwise() - meansxt.transpose()).array().square().colwise().mean();
+                // std::cout << "Xtil_Tnorm variances:\n" << variancesxt.head(10).transpose() << "\n\n";
+                // ////
+
+
+                Eigen::BDCSVD<Eigen::MatrixXd> svd(XtilT_norm, Eigen::ComputeThinU | Eigen::ComputeThinV);
+                // std::cout << "SVD U shape: " << svd.matrixU().rows() << "x" << svd.matrixU().cols() << "\n";
+                // std::cout << "SVD V shape: " << svd.matrixV().rows() << "x" << svd.matrixV().cols() << "\n";
+
                 rotation = svd.matrixV().leftCols(rank);
-                pacapcBatch_x = xBatch.transpose() * svd.matrixV().leftCols(rank);
+                // std::cout << "rotation shape: " << rotation.rows() << "x" << rotation.cols() << "\n";
+                // std::cout << "X_in BEFORE SVD (top 10 rows, left 5 cols):\n" << X_in.topLeftCorner(std::min(10, (int)X_in.rows()), std::min(5, (int)X_in.cols())) << "\n\n";
+
+                // //// DEBUG
+                // // Create a vector of indices
+                // std::vector<int> indices(Xin_idx.size());
+                // std::iota(indices.begin(), indices.end(), 0);
+
+                // // Sort the indices based on the values in Xin_idx
+                // std::sort(indices.begin(), indices.end(),
+                //     [&Xin_idx](int i1, int i2) { return Xin_idx(i1) < Xin_idx(i2); });
+
+                // // Take the first 5 (or less if Xin_idx has fewer than 5 elements)
+                // int num_to_print = std::min(5, (int)Xin_idx.size());
+
+                // // Create a matrix to store the selected rows for XtilT_norm (only first 10 columns)
+                // int num_cols_to_print = std::min(5, (int)XtilT_norm.cols());
+                // Eigen::MatrixXd selected_rows_XtilT_norm(num_to_print, num_cols_to_print);
+
+                // // Fill the matrix with the selected rows for XtilT_norm (only first 10 columns)
+                // for (int i = 0; i < num_to_print; ++i) {
+                //     selected_rows_XtilT_norm.row(i) = XtilT_norm.row(Xin_idx(indices[i])).head(num_cols_to_print);
+                // }
+                
+                // // Print the selected rows for XtilT_norm
+                // std::cout << "XtilT_norm BEFORE transformation (5 rows with smallest Xin_idx values, first 5 cols):\n" 
+                //         << selected_rows_XtilT_norm << "\n\n";
+                // ////
+
+                // Calculate in-batch PACA PCs
+                // Eigen::MatrixXd S = svd.singularValues().head(rank).asDiagonal();
+                // Xpac_in = (XtilT_norm * rotation).eval();
+                Xpac_in = svd.matrixU().leftCols(rank);
+
+                // //// DEBUG
+                // std::cout << "Xpac_in shape: " << Xpac_in.rows() << "x" << Xpac_in.cols() << "\n";
+
+                // // Calculate and print means
+                // Eigen::VectorXd means = Xpac_in.colwise().mean();
+                // std::cout << "Xpac_in means:\n" << means.transpose() << "\n\n";
+
+                // // Calculate and print variances
+                // Eigen::VectorXd variances = (Xpac_in.rowwise() - means.transpose()).array().square().colwise().mean();
+                // std::cout << "Xpac_in variances:\n" << variances.transpose() << "\n\n";
+                
+                // // Create a matrix to store the selected rows for Xpac_in
+                // Eigen::MatrixXd selected_rows_Xpac_in(num_to_print, rank);
+
+                // // Fill the matrix with the selected rows for Xpac_in
+                // for (int i = 0; i < num_to_print; ++i) {
+                //     selected_rows_Xpac_in.row(i) = Xpac_in.row(indices[i]);
+                // }
+
+                // // Print the selected rows for Xpac_in
+                // std::cout << "Xpac_in creation (5 rows with smallest Xin_idx values, all cols):\n" 
+                //         << selected_rows_Xpac_in << "\n\n";
+                // std::cout << "Xpac_in creation (top 10 rows, left 5 cols):\n" << Xpac_in.topLeftCorner(std::min(10, (int)Xpac_in.rows()), std::min(5, (int)Xpac_in.cols())) << "\n\n";
+                // ////
                
             }
 
             // Project remaining data with zeroed-out selected columns
-            Eigen::MatrixXd xRemain = X;  // Copy original matrix
-            // Create an index vector to select columns
-            for (int i = 0; i < batch; ++i) {
-                xRemain.col(inX(i)).setZero();
-            }
+            Eigen::MatrixXd X_out = X;  // Copy original matrix
+            // for (int i = 0; i < batch; ++i) {
+            //     X_out.col(Xin_idx(i)).setZero();
+            // }
+            // Zero out the selected columns using Eigen's indexed access
+            X_out(Eigen::all, Xin_idx) = Eigen::MatrixXd::Zero(X.rows(), batch);
 
-            Eigen::MatrixXd X_tilde_remain = correctedMat_calc(U0, xRemain, false);
-            P_curr = X_tilde_remain.transpose() * rotation;
+
+            Eigen::MatrixXd Xtil_out = correctedMat_calc(U0, X_out, false);
+            Eigen::MatrixXd Xpac_out = Xtil_out.transpose() * rotation;
+            // std::cout << "Xpac_out shape: " << Xpac_out.rows() << "x" << Xpac_out.cols() << "\n";
+            // std::cout << "Xpac_out BEFORE scale & Insert (top 10 rows, left 5 cols):\n" << Xpac_out.topLeftCorner(std::min(10, (int)Xpac_out.rows()), std::min(5, (int)Xpac_out.cols())) << "\n\n";
 
             // Normalize projections
-            pacapcBatch_x.colwise().normalize();
-            P_curr.colwise().normalize();
-
-            // Combine projections
-            // Logger::LogDEBUG("P_curr shape: ", P_curr.rows(), "x", P_curr.cols());
-            // Logger::LogDEBUG("pacapcBatch_x shape: ", pacapcBatch_x.rows(), "x", pacapcBatch_x.cols());
-            for (int i = 0; i < batch; ++i) {
-                P_curr.row(inX(i)) = pacapcBatch_x.col(i).transpose();
-            }
+            Xpac_in = scaleCPP(Xpac_in);
+            P_curr = scaleCPP_batchmasked(Xpac_out, Xin_idx);
+            // std::cout << "Xpac_out AFTER scale & BEFORE Insert (top 10 rows, left 5 cols):\n" << P_curr.topLeftCorner(std::min(10, (int)P_curr.rows()), std::min(5, (int)P_curr.cols())) << "\n\n";
 
             // Clear temporary matrices
-            xBatch.resize(0, 0);
-            yBatch.resize(0, 0);
-            Xtil.resize(0, 0);
+            X_in.resize(0, 0);
+            Y_in.resize(0, 0);
+            X_out.resize(0, 0);
+            Xtil_in.resize(0, 0);
+            Xtil_out.resize(0, 0);
             U0.resize(0, 0);
             rotation.resize(0, 0);
-            pacapcBatch_x.resize(0, 0);
-            xRemain.resize(0, 0);
-            X_tilde_remain.resize(0, 0);
-            inX.resize(0);
-            inY.resize(0);
+            Xpac_out.resize(0, 0);
+            
+            // //// DEBUG
+            // // Create a vector of indices
+            // std::vector<int> indices(Xin_idx.size());
+            // std::iota(indices.begin(), indices.end(), 0);
+
+            // // Sort the indices based on the values in Xin_idx
+            // std::sort(indices.begin(), indices.end(),
+            //     [&Xin_idx](int i1, int i2) { return Xin_idx(i1) < Xin_idx(i2); });
+
+            // // Take the first 5 (or less if Xin_idx has fewer than 5 elements)
+            // int num_to_print = std::min(5, (int)Xin_idx.size());
+
+            // // Create a matrix to store the selected rows
+            // Eigen::MatrixXd selected_rows(num_to_print, Xpac_in.cols());
+
+            // // Fill the matrix with the selected rows
+            // for (int i = 0; i < num_to_print; ++i) {
+            //     // selected_rows.row(i) = Xpac_in.row(indices[i]).transpose();
+            //     selected_rows.row(i) = Xpac_in.row(indices[i]);
+            // }
+            // // Print the selected rows
+            // std::cout << "Xpac_in BEFORE Insert (5 rows with smallest Xin_idx values, all cols):\n" 
+            //         << selected_rows << "\n\n";
+            // Logger::LogDEBUG("P_curr shape: ", P_curr.rows(), "x", P_curr.cols());
+            // ////
+
+            // Combine projections
+            // for (int i = 0; i < batch; ++i) {
+            //     P_curr.row(Xin_idx(i)) = Xpac_in.row(i); // Assigning rows directly
+            // }
+            P_curr(Xin_idx, Eigen::all) = Xpac_in;
+            // std::cout << "P_curr AFTER Insert (top 10 rows, left 5 cols):\n" << P_curr.topLeftCorner(std::min(10, (int)P_curr.rows()), std::min(5, (int)P_curr.cols())) << "\n\n";
+           
+            // Clear temporary matrices
+            Xpac_in.resize(0, 0);
+            Xin_idx.resize(0);
+            Yin_idx.resize(0);
 
         }
+        // //// DEBUG
+        // // Calculate and print means
+        // Eigen::VectorXd meansPcrr = P_curr.colwise().mean();
+        // std::cout << "P_curr means:\n" << meansPcrr.transpose() << "\n\n";
 
+        // // Calculate and print variances
+        // Eigen::VectorXd variancesPcrr = (P_curr.rowwise() - meansPcrr.transpose()).array().square().colwise().mean();
+        // std::cout << "P_curr variances:\n" << variancesPcrr.transpose() << "\n\n";
+        
+        // // Debug print for P_curr
+        // std::cout << "P_curr (top 10 rows, left 5 cols):\n" << P_curr.topLeftCorner(std::min(10, (int)P_curr.rows()), std::min(5, (int)P_curr.cols())) << "\n\n";
+        // ////
+
+        // Update P
         P.block(0, r * rank, p, rank) = P_curr;
 
         // Clear temporary matrices
-        // P_curr.setZero();
+        P_curr.resize(0, 0);
         
         Logger::LogLOG("Completed Random Sampling Iter: ", r + 1, " / ", niter);
     }
+    // Debug print for P
+    // std::cout << "P (top 10 rows, left 5 cols):\n" << P.topLeftCorner(std::min(10, (int)P.rows()), std::min(5, (int)P.cols())) << "\n\n";
+
     // Synchronize the RNG state back to R
     PutRNGstate();
+    // Calculate covariance matrix
+    Eigen::MatrixXd C = covCPP(P.transpose()) ;
+    // //// DEBUG
+    // std::cout << "C shape: " << C.rows() << "x" << C.cols() << "\n";
+    // std::cout << "First 10 diagonal elements of C: " << C.diagonal().head(10).transpose() << "\n\n";
+    // std::cout << "C (top 10 rows, left 5 cols):\n" << C.topLeftCorner(std::min(10, (int)C.rows()), std::min(5, (int)C.cols())) << "\n\n";
+    // ////
+
     // Compute final eigenvectors and eigenvalues
-    Eigen::MatrixXd C = P * P.transpose();
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(C);
 
     Logger::LogINFO("Randomized PACA: DONE");

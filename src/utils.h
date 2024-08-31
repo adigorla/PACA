@@ -50,6 +50,10 @@ private:
 
 Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace = true);
 
+Eigen::MatrixXd scaleCPP(const Eigen::MatrixXd& x);
+
+Eigen::MatrixXd normalizeColEigen(const Eigen::MatrixXd& x);
+
 Eigen::MatrixXd centerCPP(const Eigen::MatrixXd& x);
 
 Eigen::MatrixXd covCPP(const Eigen::MatrixXd& x); 

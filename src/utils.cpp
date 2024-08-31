@@ -57,6 +57,40 @@ Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace) {
   return x;
 };
 
+Eigen::MatrixXd scaleCPP(const Eigen::MatrixXd& x) {
+    // Calculate the mean of each column
+    Eigen::VectorXd means = x.colwise().mean();
+    
+    // Calculate the variance of each column
+    Eigen::VectorXd variances = (x.rowwise() - means.transpose()).array().square().colwise().mean();
+    
+    // Calculate the standard deviation of each column
+    Eigen::VectorXd stdDevs = variances.array().sqrt();
+    
+    // Create a scaled matrix
+    Eigen::MatrixXd scaled = x.rowwise() - means.transpose();
+    
+    // Avoid division by zero
+    for (int i = 0; i < stdDevs.size(); ++i) {
+        if (stdDevs(i) > 1e-9) {  // Threshold to avoid division by very small numbers
+            scaled.col(i).array() /= stdDevs(i);
+        } else {
+            // If standard deviation is very close to zero, set the column to zero
+            scaled.col(i).setZero();
+        }
+    }
+    
+    return scaled;
+}
+
+Eigen::MatrixXd normalizeColEigen(const Eigen::MatrixXd& x) {
+  Eigen::MatrixXd xcp = x;
+  for (int i = 0; i < xcp.cols(); i++){
+    xcp.col(i).normalize();
+  }
+  return xcp;
+};
+
 // Eigen::MatrixXd centerCPP(Eigen::MatrixXd& x) {
 //   Eigen::VectorXd mean = x.colwise().mean();
 //   return x.rowwise() - mean.transpose();
