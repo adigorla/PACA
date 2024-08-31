@@ -69,9 +69,12 @@ eigenprcomp <- function(x, center = TRUE, scale = FALSE, rank = NULL, tol = NULL
     names(result$scale) <- orig_col_names
   }
 
-  # Name the PC components as PACA1, PACA2, ...
-  colnames(result$x) <- paste0("PAC", seq_len(ncol(result$x)))
-  colnames(result$rotation) <- paste0("PAC", seq_len(ncol(result$rotation)))
+#   # Name the PC components as PAC1, PAC2, ...
+#   colnames(result$x) <- paste0("PAC", seq_len(ncol(result$x)))
+#   colnames(result$rotation) <- paste0("PAC", seq_len(ncol(result$rotation)))
+  # Name the PC components as PC1, PC2, ...
+  colnames(result$x) <- paste0("PC", seq_len(ncol(result$x)))
+  colnames(result$rotation) <- paste0("PC", seq_len(ncol(result$rotation)))
 
   return(result)
 }

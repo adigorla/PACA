@@ -154,8 +154,12 @@ paca <- function(X, Y,
   # do PCA decomp of case specific signal
   # pca.res <- prcomp(t(tmp[['Xtil']]), rank.= rank)
   pca.res <- eigenprcomp(t(tmp[['Xtil']]), rank = rank, info = info)
+
+  # Get and Name PACA PCs
   tmp$x <- pca.res$x
   tmp$rotation <- pca.res$rotation
+  colnames(tmp$x) <- paste0("PAC", seq_len(ncol(tmp$x)))
+  colnames(tmp$rotation) <- paste0("PAC", seq_len(ncol(tmp$rotation)))
 
   return(tmp)
 }
