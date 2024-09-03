@@ -51,8 +51,7 @@ Eigen::MatrixXd correctedMat_calc(const Eigen::MatrixXd& UV, const Eigen::Matrix
 
   // Subtract the projection from X_centered
   Eigen::MatrixXd XY_til = XY_centered - projection;
-  Logger::LogDEBUG("correctedMat_calc: XY_til shape: ", XY_til.rows(), "x", XY_til.cols());
-
+ 
   // Add means_matrix back to get X_tilde
   XY_til += means_matrix;
 
@@ -60,6 +59,7 @@ Eigen::MatrixXd correctedMat_calc(const Eigen::MatrixXd& UV, const Eigen::Matrix
   if (!XY_til.allFinite()) {
     throw std::runtime_error("Non-finite values detected in XY_til");
   }
+   // Logger::LogDEBUG("correctedMat_calc: XY_til shape: ", XY_til.rows(), "x", XY_til.cols());
 
   return flip ? XY_til.transpose() : XY_til;
 };

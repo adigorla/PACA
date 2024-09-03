@@ -2,7 +2,6 @@
 #include "utils.h"
 #include "pacautils.h"
 #include "cca.h"
-#include "pca.h"
 #include "paca.h"
 #include "rpaca.h"
 
@@ -62,7 +61,182 @@ Eigen::MatrixXd scaleCPP_batchmasked(const Eigen::MatrixXd& x, const Eigen::Vect
     return scaled;
 }
 
-// TODO: write a more efficient getter/setter since we have alot of non-contiguous memory access
+void residMatrix(Eigen::MatrixXd& X, const Eigen::VectorXd& PAC) {
+    int n = X.rows();
+    int p = X.cols();
+    
+    // Create V matrix
+    Eigen::MatrixXd V(p, 2);
+    V.col(0) = Eigen::VectorXd::Ones(p);
+    V.col(1) = PAC;
+
+    // // Calculate gamma
+    // Eigen::MatrixXd gamma = V.transpose() * V;
+    // Logger::LogDEBUG("gamma shape: ", gamma.rows(), "x", gamma.cols());
+    // std::cout << gamma << std::endl;
+    // double cond = gamma.jacobiSvd().singularValues()(0) / gamma.jacobiSvd().singularValues()(gamma.cols() - 1);
+    // Logger::LogDEBUG("Condition number of gamma: ", cond);
+    
+    // Calculate Xtil
+    Eigen::MatrixXd Xbeta = Eigen::MatrixXd::Zero(n, p);
+    
+    // Solve for beta and calculate Xtil for each feature
+    Eigen::VectorXd beta_j(2);
+    Eigen::VectorXd X_row(p);
+    for (int j = 0; j < n; ++j) {
+        X_row = X.row(j);
+        beta_j = (V.transpose() * V).ldlt().solve(V.transpose() * X_row);
+        Xbeta.row(j) = (V * beta_j).transpose();
+    }
+    // DEBUG
+    if (!Xbeta.allFinite()) {
+            throw std::runtime_error("Non-finite values detected in Xbeta");
+    };
+
+    // Update X: to residual of X
+    X = X - Xbeta;
+    
+    // Center and scale X
+    X = scaleCPP(X);
+    Logger::LogDEBUG("Done w/ resid");
+}
+
+
+void singlearpaca_pvt(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, 
+                     Eigen::MatrixXd& iterPAC, Eigen::VectorXd& iterEIG, Eigen::VectorXd& klist,
+                     double threshold, const int niter, const int batch,
+                     const int rank, bool normalize) {
+    // int m = X.rows();
+    int p = X.cols();
+    int q = Y.cols();
+    
+
+    Eigen::MatrixXd P = Eigen::MatrixXd::Zero(p, niter * rank);
+
+    // Initialize the random number generator
+    unsigned int seed = static_cast<unsigned int>(unif_rand() * UINT_MAX);
+    Logger::LogDEBUG("setting seed :", seed);
+    std::mt19937 gen(seed);
+
+    for (int r = 0; r < niter; ++r) {
+        Logger::LogINFO("Running randomized PACA Iteration ", r + 1, " of ", niter);
+        Eigen::MatrixXd P_curr = Eigen::MatrixXd::Zero(p, rank);
+        int selK;
+        {
+            Timer timer("Iteration " + std::to_string(r + 1));
+            // Sample batch indices for X and Y
+            Eigen::VectorXi Xin_idx = sampleWithoutReplacement(p, batch, gen);
+            Eigen::VectorXi Yin_idx = sampleWithoutReplacement(q, batch, gen);
+
+            // Extract batches
+            Eigen::MatrixXd X_in = X(Eigen::all, Xin_idx);
+            Eigen::MatrixXd Y_in = Y(Eigen::all, Yin_idx);
+
+            // Run PACA on the batch
+            Eigen::MatrixXd Xtil_in, U0;
+            {
+                Logger::LogLOG("Subsample PACA: Starting ...");
+                Eigen::MatrixXd A, B, U, V;
+                Eigen::VectorXd eigs;
+                Eigen::MatrixXd X_in_copy = X_in;
+
+                // Run PACA
+                selectK_pvt(X_in, Y_in, selK, normalize, eigs, A, B, U, V, threshold);
+                klist(r) = selK;
+
+                Logger::LogINFO("Estimating within iter PACA signals ...");
+                Logger::LogLOG("Residualizing Shared Signal ...");
+
+                // Calculate shared components
+                int dU1 = U.rows();
+                U0 = UV1_calc(U, selK, dU1);
+
+                // Calcute X matrix with case specific variation only
+                Xtil_in = correctedMat_calc(U0, X_in, false);
+
+                // Clearing Temporary Matrices with Safer Operations
+                A.resize(0, 0);
+                B.resize(0, 0);
+                U.resize(0, 0);
+                V.resize(0, 0);
+                eigs.resize(0);
+                X_in_copy.resize(0, 0);
+            }
+
+            // Perform PCA on Xtil_in
+            Eigen::MatrixXd rotation, Xpac_in;
+            {
+                Timer timer("Subsample PCA");
+                Eigen::MatrixXd XtilT_norm = scaleCPP(std::move(Xtil_in.transpose().eval()));
+
+
+                Eigen::BDCSVD<Eigen::MatrixXd> svd(XtilT_norm, Eigen::ComputeThinU | Eigen::ComputeThinV);
+                rotation = svd.matrixV().leftCols(rank);
+
+                // Calculate in-batch PACA PCs
+                Xpac_in = svd.matrixU().leftCols(rank);
+               
+            }
+
+            // Project remaining data with zeroed-out selected columns
+            Eigen::MatrixXd X_out = X;  // Copy original matrix
+            // Zero out the selected columns using Eigen's indexed access
+            X_out(Eigen::all, Xin_idx) = Eigen::MatrixXd::Zero(X.rows(), batch);
+
+
+            // Extract out of batch paca components
+            Eigen::MatrixXd Xtil_out = correctedMat_calc(U0, X_out, false);
+            Eigen::MatrixXd Xpac_out = Xtil_out.transpose() * rotation;
+            
+
+            // Normalize projections
+            Xpac_in = scaleCPP(Xpac_in);
+            P_curr = scaleCPP_batchmasked(Xpac_out, Xin_idx);
+
+
+            // Clear temporary matrices
+            X_in.resize(0, 0);
+            Y_in.resize(0, 0);
+            X_out.resize(0, 0);
+            Xtil_in.resize(0, 0);
+            Xtil_out.resize(0, 0);
+            U0.resize(0, 0);
+            rotation.resize(0, 0);
+            Xpac_out.resize(0, 0);
+
+
+            // Combine projections
+            P_curr(Xin_idx, Eigen::all) = Xpac_in;
+
+
+            // Clear temporary matrices
+            Xpac_in.resize(0, 0);
+            Xin_idx.resize(0);
+            Yin_idx.resize(0);
+
+        }
+
+        // Update P
+        P.block(0, r * rank, p, rank) = P_curr;
+
+        // Clear temporary matrices
+        P_curr.resize(0, 0);
+        
+        Logger::LogLOG("Completed Random Sampling Iter: ", r + 1, " / ", niter);
+    }
+
+    // Calculate covariance matrix
+    Eigen::MatrixXd C = covCPP(P.transpose()) ;
+
+
+    // Compute final eigenvectors and eigenvalues
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(C);
+
+    iterPAC = eigensolver.eigenvectors().rightCols(rank);
+    iterEIG = eigensolver.eigenvalues().tail(rank).reverse();
+    Logger::LogINFO("Randomized PACA: DONE");
+};
+
 
 ////////////////////////////////// Main Randomized PACA functions //////////////////////////////////
 
@@ -76,7 +250,7 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
     Timer timer("rPACA");
     Logger::LogINFO("Randomized PACA (with K=", k, ", subsample size=", batch, ") : Starting ...");
 
-    int m = X.rows();
+    // int m = X.rows();
     int p = X.cols();
     int q = Y.cols();
 
@@ -88,9 +262,6 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
     unsigned int seed = static_cast<unsigned int>(unif_rand() * UINT_MAX);
     Logger::LogDEBUG("setting seed :", seed);
     std::mt19937 gen(seed);
-
-    // Create a vector of all row indices
-    Eigen::VectorXi all_rows = Eigen::VectorXi::LinSpaced(m, 0, m - 1);
 
     for (int r = 0; r < niter; ++r) {
         Logger::LogINFO("Iteration ", r + 1, " of ", niter);
@@ -333,4 +504,50 @@ Rcpp::List cpp_rPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
         Rcpp::Named("x") = eigensolver.eigenvectors().rightCols(rank),
         Rcpp::Named("eigs") = eigensolver.eigenvalues().tail(rank).reverse()
     );
-}
+};
+
+//' @export
+//' @noRd
+// [[Rcpp::export(cpp_autorPACA)]]
+Rcpp::List cpp_autorPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y,
+                     int niter, int batch, int rank,
+                     double threshold,
+                     bool normalize, int verbosity) {
+
+    Logger::SetVerbosity(verbosity);
+    Timer timer("rPACA");
+    Logger::LogINFO("Auto Randomized PACA (with subsample size=", batch, ") : Starting ...");
+
+    // Create local copies of X and Y to avoid modifying the original matrices
+    Eigen::MatrixXd Xcurr = X;
+    Eigen::MatrixXd Ycurr = Y;
+
+    // Create the output matrices
+    Eigen::MatrixXd PACfinal = Eigen::MatrixXd::Zero(X.cols(), rank);
+    Eigen::VectorXd EIGfinal = Eigen::VectorXd::Zero(rank);
+    Eigen::VectorXd Klist = Eigen::VectorXd::Zero(niter);
+
+    // Synchronize R's RNG state
+    GetRNGstate();
+
+    // Perform randomized PACA
+    singlearpaca_pvt(Xcurr, Ycurr, PACfinal, EIGfinal, Klist,
+                    threshold, niter, batch, rank, normalize);
+
+    // PACfinal.col(pr) = iterPAC.col(0);
+    // EIGfinal(pr) = iterEIG(0);
+    // // Upadate X by residualizing out the current PAC
+    // residMatrix(Xcurr, iterPAC.col(0));
+    // // residMatrix(Ycurr, iterPAC.col(0));
+
+    // Synchronize the RNG state back to R
+    PutRNGstate();
+
+    Logger::LogINFO("Auto Randomized PACA: DONE");
+    return Rcpp::List::create(
+        Rcpp::Named("x") = PACfinal,
+        Rcpp::Named("eigs") = EIGfinal,
+        Rcpp::Named("k.iter") = Klist
+    );
+
+};

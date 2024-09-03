@@ -15,8 +15,9 @@
 #'          Control (foreground) input data matrix. \cr
 #'          It is recommended to normalize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
-#' @param k Positive integer, \eqn{k > 1}; \cr
-#'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.
+#' @param k positive integer, optional (default: \eqn{NULL}); \cr
+#'          Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
+#'          When \eqn{k = NULL} (default), K is automatically infered, i.e, we run auto rPACA by default.
 #' @param niter Positive integer; \cr
 #'              Number random sampling iterations.
 #' @param batch Positive integer; \cr
@@ -24,6 +25,10 @@
 #'              Note that \eqn{k < batch-1} and \eqn{batch < min{m, n1, n0}}.
 #' @param rank Positive integer, optional (default \eqn{5}); \cr
 #'             Number of dominant principle components to be computed for the corrected case data.
+#' @param thrsh Positive real value, optional (default \eqn{10.0}); \cr
+#'              Threshold value for the maximum ratio of variance in \emph{PACA} corrected \code{X} PCs and the variance it explain in Y
+#'              which indicates the presence of residual shared variation in X.\cr
+#'              Only used when \code{k = NULL}.
 #' @param info Integer, optional (default: 1); \cr
 #'          Verbosity level for the log generated. \cr
 #'          0: Errors and warnings only \cr
@@ -37,13 +42,17 @@
 #'                     the projections / scores of the randomized \emph{PACA} corrected case data.
 #'    }
 #'    \item{eigs}{   vector of size \eqn{rank}; \cr
-#'                     the eigen values of the returned PC components.
+#'                     the eigen values of the returned PACA PC components.
 #'    }
-#'}
+#'   \item{k.iter}{  vector of size \eqn{niter}; \cr
+#'                      the number of shared dimensions removed at each iteration.}
+#'    }
 #' @export
 #'
 #' @rdname rPACA
-rpaca <- function(X, Y, k, niter = 10, batch = 100, rank = 5, scale = FALSE, info = 1) {
+###########################################################################################################
+
+rpaca <- function(X, Y, k=NULL, niter = 10, batch = 100, rank = 5, thrsh = 10.0, scale = FALSE, info = 1) {
   # Input shape check
   if (dim(X)[1] != dim(Y)[1]) {
     stop(sprintf(
@@ -59,9 +68,9 @@ rpaca <- function(X, Y, k, niter = 10, batch = 100, rank = 5, scale = FALSE, inf
     ))
   }
 
-  if (k >= batch - 1) {
+  if (!is.null(k) && k >= batch - 1) {
     stop(sprintf(
-      "k needs to be less than batch - 1 = %d.",
+      "When k is specified, k needs to be less than batch - 1 = %d.",
       batch - 1
     ))
   }
@@ -69,14 +78,22 @@ rpaca <- function(X, Y, k, niter = 10, batch = 100, rank = 5, scale = FALSE, inf
   names_list <- getNames(X, Y)
 
   # Call C++ function
-  result <- cpp_rPACA(X, Y, k, niter, batch, rank, scale, info)
+  if (is.null(k)){
+    tmp <- cpp_autorPACA(X, Y, niter, batch, rank, thrsh, scale, info)
+  } else{
+    tmp <- cpp_rPACA(X, Y, k, niter, batch, rank, scale, info)
+    tmp$k.iter <- rep(k, niter)
+  }
+
 
   # Add row and column names
-  rownames(result$x) <- names_list$X$col
-  colnames(result$x) <- paste0("PAC", 1:rank)
-  names(result$eigs) <- paste0("PAC", 1:rank)
+  rownames(tmp$x) <- names_list$X$col
+  colnames(tmp$x) <- paste0("PAC", 1:rank)
+  names(tmp$eigs) <- paste0("PAC", 1:rank)
+  names(tmp$k.iter) <- paste0("iter", 1:niter)
 
-  return(result)
+
+  return(tmp)
 }
 
 ###########################################################################################################

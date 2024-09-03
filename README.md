@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 ![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)
-![release: v0.4.0](https://img.shields.io/badge/release-v0.4.0-green)
+![release: v0.5.0](https://img.shields.io/badge/release-v0.4.0-green)
 ![coverage: 100%](https://img.shields.io/badge/coverage-80%25-brightgreen)
 ![docs: in-progress](https://img.shields.io/badge/docs-in--progress-yellow)
 <!-- badges: end -->
@@ -11,11 +11,11 @@ Phenotype Aware Components Analysis (**PACA**) is a contrastive learning approac
 
 ## Installation
 
-**PACA** is implemented as a **R** packages which depends on the following :
+**PACA** is implemented as a **R** (>= v4) packages which depends on the following :
 
-* Rcpp
-* RcppEigen
-* stats
+* Rcpp (>= v1.0)
+* RcppEigen (>= v3.4)
+* stats (>= v4.1)
 
 You can install **PACA** using *devtools*:
 
@@ -53,6 +53,7 @@ X.std <- scale(X, center = T, scale = T)
 Y.std <- scale(Y, center = T, scale = T)
 
 # run PACA (and infer k)
+set.seed(4499)
 PACA.res <- paca(X.std, Y.std)
 
 # return the top 5 (defult rank) unique components of the case data
@@ -104,6 +105,7 @@ Y.std <- scale(Y, center = T, scale = T)
 k.select <- 10
 
 # run randomized PACA
+set.seed(4499)
 rPACA.res <- rpaca(X.std, Y.std, k.select, niter = 10, batch = 300, rank = 5)
 
 # the dimension of the returned unique components of the cases
@@ -131,7 +133,7 @@ Y.std <- scale(Y, center = T, scale = T)
 
 # test for selected K
 k.h0 <- 10
-
+set.seed(4499)
 PACA.nulltest <- paca_null(X.std, Y.std, k.h0, nperm = 100)
 
 # p-value of rejecting H0 there is no case specific variation PACA PC1

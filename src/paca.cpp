@@ -257,10 +257,10 @@ Rcpp::List cpp_autoPACA(const Eigen::MatrixXd& Xo, const Eigen::MatrixXd& Yo,
   Eigen::MatrixXd U0 = UV1_calc(U, selK, dU1);
 
   // Calcute X matrix with case specific variation only
-  Eigen::MatrixXd X = Xo;
-  if (normalize){
-    X = normalizeCPP(X);
-  }
+  // Eigen::MatrixXd X = Xo;
+  // if (normalize){
+  //   X = normalizeCPP(X);
+  // }
   Eigen::MatrixXd Xtil = correctedMat_calc(U0, Xo, false);
 
 

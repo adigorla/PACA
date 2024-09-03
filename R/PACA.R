@@ -127,6 +127,7 @@ paca <- function(X, Y,
   } else{ # run PACA with fixed K
     print("running w/ fixed k")
     tmp <- cpp_PACA(X, Y, k, scale, ccweights, info)
+    tmp$k <- k
     if(ccweights){
       cc_names <- paste0('CC', seq(length(tmp$corr)))
       names(tmp$corr) <- cc_names

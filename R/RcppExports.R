@@ -37,6 +37,12 @@ cpp_rPACA <- function(X, Y, k, niter, batch, rank, normalize, verbosity) {
     .Call(`_PACA_cpp_rPACA`, X, Y, k, niter, batch, rank, normalize, verbosity)
 }
 
+#' @export
+#' @noRd
+cpp_autorPACA <- function(X, Y, niter, batch, rank, threshold, normalize, verbosity) {
+    .Call(`_PACA_cpp_autorPACA`, X, Y, niter, batch, rank, threshold, normalize, verbosity)
+}
+
 normalizeCPP <- function(x, inplace) {
     .Call(`_PACA_normalizeCPP`, x, inplace)
 }

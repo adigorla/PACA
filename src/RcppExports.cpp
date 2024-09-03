@@ -106,6 +106,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_autorPACA
+Rcpp::List cpp_autorPACA(const Eigen::MatrixXd& X, const Eigen::MatrixXd& Y, int niter, int batch, int rank, double threshold, bool normalize, int verbosity);
+RcppExport SEXP _PACA_cpp_autorPACA(SEXP XSEXP, SEXP YSEXP, SEXP niterSEXP, SEXP batchSEXP, SEXP rankSEXP, SEXP thresholdSEXP, SEXP normalizeSEXP, SEXP verbositySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
+    Rcpp::traits::input_parameter< int >::type batch(batchSEXP);
+    Rcpp::traits::input_parameter< int >::type rank(rankSEXP);
+    Rcpp::traits::input_parameter< double >::type threshold(thresholdSEXP);
+    Rcpp::traits::input_parameter< bool >::type normalize(normalizeSEXP);
+    Rcpp::traits::input_parameter< int >::type verbosity(verbositySEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_autorPACA(X, Y, niter, batch, rank, threshold, normalize, verbosity));
+    return rcpp_result_gen;
+END_RCPP
+}
 // normalizeCPP
 Eigen::MatrixXd normalizeCPP(Eigen::MatrixXd& x, bool inplace);
 RcppExport SEXP _PACA_normalizeCPP(SEXP xSEXP, SEXP inplaceSEXP) {
@@ -126,6 +144,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_PACA_cpp_autoPACA", (DL_FUNC) &_PACA_cpp_autoPACA, 6},
     {"_PACA_cpp_prcomp", (DL_FUNC) &_PACA_cpp_prcomp, 6},
     {"_PACA_cpp_rPACA", (DL_FUNC) &_PACA_cpp_rPACA, 8},
+    {"_PACA_cpp_autorPACA", (DL_FUNC) &_PACA_cpp_autorPACA, 8},
     {"_PACA_normalizeCPP", (DL_FUNC) &_PACA_normalizeCPP, 2},
     {NULL, NULL, 0}
 };

@@ -4,7 +4,17 @@
 \alias{rpaca}
 \title{Randomized Phenotype Aware Components Analysis (rPACA)}
 \usage{
-rpaca(X, Y, k, niter = 10, batch = 100, rank = 5, scale = FALSE, info = 1)
+rpaca(
+  X,
+  Y,
+  k = NULL,
+  niter = 10,
+  batch = 100,
+  rank = 5,
+  thrsh = 10,
+  scale = FALSE,
+  info = 1
+)
 }
 \arguments{
 \item{X}{\eqn{m} by \eqn{n_1} matrix; \cr
@@ -17,8 +27,9 @@ Control (foreground) input data matrix. \cr
 It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
-\item{k}{Positive integer, \eqn{k > 1}; \cr
-Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}.}
+\item{k}{positive integer, optional (default: \eqn{NULL}); \cr
+Number of, \eqn{k}, dimensions of shared variation to be removed from case data \code{X}. \cr
+When \eqn{k = NULL} (default), K is automatically infered, i.e, we run auto rPACA by default.}
 
 \item{niter}{Positive integer; \cr
 Number random sampling iterations.}
@@ -29,6 +40,11 @@ Note that \eqn{k < batch-1} and \eqn{batch < min{m, n1, n0}}.}
 
 \item{rank}{Positive integer, optional (default \eqn{5}); \cr
 Number of dominant principle components to be computed for the corrected case data.}
+
+\item{thrsh}{Positive real value, optional (default \eqn{10.0}); \cr
+Threshold value for the maximum ratio of variance in \emph{PACA} corrected \code{X} PCs and the variance it explain in Y
+which indicates the presence of residual shared variation in X.\cr
+Only used when \code{k = NULL}.}
 
 \item{info}{Integer, optional (default: 1); \cr
 Verbosity level for the log generated. \cr
@@ -44,9 +60,11 @@ Verbosity level for the log generated. \cr
                     the projections / scores of the randomized \emph{PACA} corrected case data.
    }
    \item{eigs}{   vector of size \eqn{rank}; \cr
-                    the eigen values of the returned PC components.
+                    the eigen values of the returned PACA PC components.
    }
-}
+  \item{k.iter}{  vector of size \eqn{niter}; \cr
+                     the number of shared dimensions removed at each iteration.}
+   }
 }
 \description{
 This is the randomized version of the basic \code{\link{PACA}} algorithm.
