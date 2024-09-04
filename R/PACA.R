@@ -225,11 +225,11 @@ paca_varPC1 <- function(X, Y, k, info = 0){
 #'
 #' @usage paca_null(X, Y, k, nperm = 100, info = 0)
 #'
-#' @param X \eqn{n_1} by \eqn{m} matrix; \cr
+#' @param X \eqn{m} by \eqn{n_1} matrix; \cr
 #'          Case (foreground) input data matrix. \cr
 #'          It is recommended to normalize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
-#' @param Y \eqn{n_0} by \eqn{m} matrix; \cr
+#' @param Y \eqn{m} by \eqn{n_0} matrix; \cr
 #'          Control (background) input data matrix. \cr
 #'          It is recommended to normalize the feature scales as appropriate for the data modality.
 #'          E.g. quantile normalization (or other comparable approaches) for RNAseq data.
@@ -263,18 +263,23 @@ paca_varPC1 <- function(X, Y, k, info = 0){
 paca_null <- function(X, Y, k, nperm = 100, info = 0){
 
   # perp data for perm
-  xy <- cbind(t(X), t(Y))
+  xy <- cbind(X, Y)
   cat("\nStarting permutations...\n") # \nComb matrix dim : ", dim(xy))
   ids <- c(1:dim(xy)[2])
   colnames(xy) <- ids
   sz <- ceiling(length(ids)/2)
 
-  # Scale input for CCA
-  stdDat <- transformCCAinput(X, Y, center = TRUE, scale = TRUE)
+  # Scale input (by samples)  for CCA
+  X.std <- scale(X, center = TRUE, scale = TRUE)
+  Y.std <- scale(Y, center = TRUE, scale = TRUE)
+
+  if ( ((sum(sum(is.na(X.std))) ) > 0) || ((sum(sum(is.na(X.std))) ) > 0)){
+    stop("Division by zero due to constant features in either X or Y.")
+  }
   rm(X, Y)
 
   # get point stat for selected k
-  empVar <- paca_varPC1(stdDat$x, stdDat$y, k, info = info)
+  empVar <- paca_varPC1(X.std, Y.std, k, info = info)
   rm(stdDat)
 
   # get dist of permuted null
