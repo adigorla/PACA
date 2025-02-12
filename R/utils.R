@@ -149,7 +149,7 @@ calcPval <- function(accs, nulls){
   if(accs < min(nulls)){
     pval <- 1
   } else if (accs > max(nulls)){
-    pval <- 0
+    pval <- 1/(length(nulls)+1)
   } else {
     n <- length(nulls)
     r <- sum(nulls > accs)

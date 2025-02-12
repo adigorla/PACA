@@ -51,7 +51,7 @@ Verbosity level for the log generated. \cr
 0: Errors and warnings only \cr
 1: Basic informational messages \cr
 2: More detailed informational messages \cr
-3: Debug mode, all informational log is dumped}
+3: Debug mode, full informational log is dumped}
 }
 \value{
 \code{rpaca} returns a list containing the following components:

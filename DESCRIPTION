@@ -1,8 +1,8 @@
 Package: PACA
 Type: Package
 Title: Phenotype Aware Components Analysis
-Version: 0.5.0
-Date: 2022-12-28
+Version: 0.5.1
+Date: 2024-12-28
 Authors@R: person("Aditya", "Gorla", email = "adityagorla@ucla.edu",role = c("aut", "cre"))
 Description: Phenotype Aware Components Analysis (PACA) is a contrastive learning approach leveraging canonical 
   correlation analysis to robustly capture weak sources of subphenotypic variation. PACA can be used to define 

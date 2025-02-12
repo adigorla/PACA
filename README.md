@@ -40,12 +40,15 @@ X <- read.table("case_data1.txt")
 Y <- read.table("control_data1.txt")
 ```
 >[!IMPORTANT]
+>We assume the features are scaled as appropriate for the data type (e.g., quantile normalization for RNAseq data). 
+>
 >All PACA functions functions the input matrices to be of shape **features-by-samples (MxN)**. So if input data is NxM, transpose both matrices to MxN
 > ```r
 > Xt <- t(X)
 > Yt <- t(Y)
 > ```
-The input data, `X` & `Y` needs to be of the form features-by-samples (MxN), where M > N. We assume the features are scaled as appropriate for the data type (e.g., quantile normalization for RNAseq data). Then the input data needs to be scaled along the sample axis, like below.
+
+The input data, `X` & `Y` needs to be of the form features-by-samples (MxN), where M > N. Then the input data needs to be scaled along the sample axis, like below.
 ``` r
 # standardize 
 Xt.std <- scale(Xt, center = T, scale = T)

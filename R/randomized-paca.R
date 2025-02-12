@@ -34,7 +34,7 @@
 #'          0: Errors and warnings only \cr
 #'          1: Basic informational messages \cr
 #'          2: More detailed informational messages \cr
-#'          3: Debug mode, all informational log is dumped
+#'          3: Debug mode, full informational log is dumped
 #'
 #' @return \code{rpaca} returns a list containing the following components:
 #' \describe{
@@ -61,10 +61,10 @@ rpaca <- function(X, Y, k=NULL, niter = 10, batch = 100, rank = 5, thrsh = 10.0,
     ))
   }
 
-  if (batch >= min(c(dim(X)[1], dim(Y)[1], dim(X)[2]))) {
+  if (batch >= min(c(dim(X)[1], dim(Y)[2], dim(X)[2]))) {
     stop(sprintf(
       "Batch size needs to be less than min(m, n1, n0) = %d.",
-      min(c(dim(X)[1], dim(Y)[1], dim(X)[2]))
+      min(c(dim(X)[1], dim(Y)[2], dim(X)[2]))
     ))
   }
 

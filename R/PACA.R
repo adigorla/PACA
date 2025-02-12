@@ -192,7 +192,7 @@ paca <- function(X, Y,
 #'          0: Errors and warnings only \cr
 #'          1: Basic informational messages \cr
 #'          2: More detailed informational messages \cr
-#'          3: Debug mode, all informational log is dumped
+#'          3: Debug mode, full informational log is dumped
 #'
 #' @return non-negative real value; the variance of the top \emph{PACA} PC of the input data (\code{X}).
 #'
@@ -203,7 +203,7 @@ paca <- function(X, Y,
 paca_varPC1 <- function(X, Y, k, info = 0){
 
   res <- cpp_PACA(X, Y, k, TRUE, FALSE, info)
-  pca.res <- eigenprcomp(t(res[['Xtil']]), rank = rank, info = info)$x
+  pca.res <- eigenprcomp(t(res[['Xtil']]), rank = 1, info = info)$x
   # pca.res <- rpca(t(res[['Xtil']]), k = 1, center = TRUE, scale = FALSE, q = 2)$x
 
   return(var(pca.res[,1]))
@@ -242,7 +242,7 @@ paca_varPC1 <- function(X, Y, k, info = 0){
 #'          0: Errors and warnings only \cr
 #'          1: Basic informational messages \cr
 #'          2: More detailed informational messages \cr
-#'          3: Debug mode, all informational log is dumped
+#'          3: Debug mode, full informational log is dumped
 #'
 #' @return \code{paca_null} returns a list containing the following components:
 #' \describe{
@@ -269,9 +269,11 @@ paca_null <- function(X, Y, k, nperm = 100, info = 0){
   colnames(xy) <- ids
   sz <- ceiling(length(ids)/2)
 
-  # Scale input (by samples)  for CCA
-  X.std <- scale(X, center = TRUE, scale = TRUE)
-  Y.std <- scale(Y, center = TRUE, scale = TRUE)
+  # # Scale input (by samples)  for CCA
+  # X.std <- scale(X, center = TRUE, scale = TRUE)
+  # Y.std <- scale(Y, center = TRUE, scale = TRUE)
+  X.std <- X
+  Y.std <- Y
 
   if ( ((sum(sum(is.na(X.std))) ) > 0) || ((sum(sum(is.na(X.std))) ) > 0)){
     stop("Division by zero due to constant features in either X or Y.")
@@ -280,7 +282,6 @@ paca_null <- function(X, Y, k, nperm = 100, info = 0){
 
   # get point stat for selected k
   empVar <- paca_varPC1(X.std, Y.std, k, info = info)
-  rm(stdDat)
 
   # get dist of permuted null
   nullVars <- c()
@@ -288,8 +289,8 @@ paca_null <- function(X, Y, k, nperm = 100, info = 0){
     inCase <- sample(ids, size=sz, replace=F)
     Xs <- xy[,inCase]
     Ys <- xy[,setdiff(ids, inCase)]
-    Xs <- scale(Xs, center = TRUE, scale = T)
-    Ys <- scale(Ys, center = TRUE, scale = T)
+    # Xs <- scale(Xs, center = TRUE, scale = T)
+    # Ys <- scale(Ys, center = TRUE, scale = T)
 
     nv <- paca_varPC1(Xs, Ys, k)
 

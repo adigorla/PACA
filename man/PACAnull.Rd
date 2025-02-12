@@ -7,12 +7,12 @@
 paca_null(X, Y, k, nperm = 100, info = 0)
 }
 \arguments{
-\item{X}{\eqn{n_1} by \eqn{m} matrix; \cr
+\item{X}{\eqn{m} by \eqn{n_1} matrix; \cr
 Case (foreground) input data matrix. \cr
 It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
 
-\item{Y}{\eqn{n_0} by \eqn{m} matrix; \cr
+\item{Y}{\eqn{m} by \eqn{n_0} matrix; \cr
 Control (background) input data matrix. \cr
 It is recommended to normalize the feature scales as appropriate for the data modality.
 E.g. quantile normalization (or other comparable approaches) for RNAseq data.}
@@ -28,7 +28,7 @@ Verbosity level for the log generated. \cr
 0: Errors and warnings only \cr
 1: Basic informational messages \cr
 2: More detailed informational messages \cr
-3: Debug mode, all informational log is dumped}
+3: Debug mode, full informational log is dumped}
 }
 \value{
 \code{paca_null} returns a list containing the following components:
