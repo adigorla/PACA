@@ -18,11 +18,10 @@ void solveNormalEQ(const Eigen::MatrixXd& G, Eigen::LLT<Eigen::MatrixXd, Eigen::
 
   // 2. Check SVD convergence
   if (!(svd_solver.matrixU().cols() > 0)) {
-    Logger::LogWARN("SVD staus: FAILED");
-    return;
-  } else{
-    Logger::LogDEBUG("SVD status : ", ((svd_solver.matrixU().cols() > 0) ? "ok" : "FAILED"));
+    Logger::LogERROR("SVD decomposition failed - matrixU has ", svd_solver.matrixU().cols(), " columns");
   }
+  
+  Logger::LogDEBUG("SVD status: OK");
 
   // 3. Compute canonical correlations and vectors
   Eigen::MatrixXd U = svd_solver.matrixU();
@@ -32,9 +31,30 @@ void solveNormalEQ(const Eigen::MatrixXd& G, Eigen::LLT<Eigen::MatrixXd, Eigen::
     std::swap(U, V);
   }
 
+  // Log dimensions before solve to diagnose the DTRSM error
+  Logger::LogDEBUG("Pre-solve dimensions:");
+  Logger::LogDEBUG("  LLtX.matrixU(): ", LLtX.matrixU().rows(), "x", LLtX.matrixU().cols());
+  Logger::LogDEBUG("  U: ", U.rows(), "x", U.cols());
+  Logger::LogDEBUG("  LLtY.matrixU(): ", LLtY.matrixU().rows(), "x", LLtY.matrixU().cols());
+  Logger::LogDEBUG("  V: ", V.rows(), "x", V.cols());
+
+  // // Check dimension compatibility
+  // if (LLtX.matrixU().rows() != U.rows()) {
+  //   Logger::LogERROR("Dimension mismatch in solve for A: LLtX(", LLtX.matrixU().rows(), 
+  //                    "x", LLtX.matrixU().cols(), ") vs U(", U.rows(), "x", U.cols(), ")");
+  // }
+  
+  // if (LLtY.matrixU().rows() != V.rows()) {
+  //   Logger::LogERROR("Dimension mismatch in solve for B: LLtY(", LLtY.matrixU().rows(), 
+  //                    "x", LLtY.matrixU().cols(), ") vs V(", V.rows(), "x", V.cols(), ")");
+  // }
+
   // 4. Solve for canonical vectors
   retA = LLtX.matrixU().solve(U);
   retB = LLtY.matrixU().solve(V);
+
+  Logger::LogDEBUG("LLt Solved OK");
+
 
   // // 4. Solve for canonical vectors using QR decomposition for better numerical stability
   // Eigen::HouseholderQR<Eigen::MatrixXd> qr_X(LLtX.matrixU());
@@ -50,6 +70,9 @@ void solveNormalEQ(const Eigen::MatrixXd& G, Eigen::LLT<Eigen::MatrixXd, Eigen::
   // for (int i = 0; i < num_top_eigenvalues; ++i) {
   //   Logger::LogDEBUG("SVD eig : ", i, "- ", retRho(i));
   // }
+
+  Logger::LogDEBUG("S vals Solved OK");
+
 
 };
 
@@ -159,7 +182,8 @@ void doCCA_pvt(Eigen::MatrixXd& X, Eigen::MatrixXd& Y, bool normalize,
       solveNormalEQ(Gamma, lltOfCX, lltOfCY,
                     A, B, eigs, false);
     } else {
-      solveNormalEQ(Gamma, lltOfCX, lltOfCY,
+      Logger::LogDEBUG("p < q, solving transposed system");
+      solveNormalEQ(Gamma.transpose(), lltOfCX, lltOfCY,
                     A, B, eigs, true);
     }
   }

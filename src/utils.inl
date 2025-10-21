@@ -2,6 +2,28 @@
 
 // Logger template function definitions
 template<typename... Args>
+void Logger::LogERROR(Args... args) {
+    std::ostringstream oss;
+    
+    // Build timestamp and prefix
+    const auto in_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    oss << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X") << "] ERROR : ";
+    
+    // Add the actual error message
+    concatenate_args(oss, args...);
+    std::string message = oss.str();
+    
+    // Always log error (ignore verbosity) - use stderr
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        Rcpp::Rcerr << "\033[1;31m" << message << "\033[0m\n";  // Bold Red
+    }
+    
+    // Throw exception to exit gracefully and return to R
+    Rcpp::stop(message);
+}
+
+template<typename... Args>
 void Logger::LogWARN(Args... args) {
     Log(0, "WARN  : ", args...);
 }

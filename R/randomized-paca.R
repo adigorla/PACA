@@ -61,7 +61,7 @@ rpaca <- function(X, Y, k=NULL, niter = 10, batch = 100, rank = 5, thrsh = 10.0,
     ))
   }
 
-  if (batch >= min(c(dim(X)[1], dim(Y)[2], dim(X)[2]))) {
+  if (batch > min(c(dim(X)[1], dim(Y)[2], dim(X)[2]))) {
     stop(sprintf(
       "Batch size needs to be less than min(m, n1, n0) = %d.",
       min(c(dim(X)[1], dim(Y)[2], dim(X)[2]))

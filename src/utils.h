@@ -8,6 +8,9 @@ public:
     static void SetVerbosity(int level);
 
     template<typename... Args>
+    static void LogERROR(Args... args);
+
+    template<typename... Args>
     static void LogWARN(Args... args);
 
     template<typename... Args>
